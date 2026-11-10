@@ -1,7 +1,5 @@
 /* Subtler scrim than Sheet: the drawer reveals detail, it does not block
-   work. A page with a status bar sets --ctd-drawer-bottom-inset to its
-   height: the drawer stops above it, and the status bar rises above the
-   scrim (Books.module.css), so the book count stays in view, undimmed. */
+   work. */
 .overlay {
 	position: fixed;
 	inset: 0;
@@ -18,16 +16,101 @@
 }
 
 .content {
-	position: fixed;
-	top: 0;
-	right: 0;
-	bottom: var(--ctd-drawer-bottom-inset, 0);
 	display: flex;
 	flex-direction: column;
 	background-color: var(--ctd-surface);
 	border-left: var(--ctd-control-border-width) solid var(--ctd-border);
 	box-shadow: var(--ctd-dialog-shadow);
+}
+
+.window {
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
 	z-index: 111;
+}
+
+/* In its page, the drawer is one more layer of the content: the page sets
+   where it sits; the shadow falls only to the left, over what it covers,
+   never onto the bars above or below. */
+.panel {
+	position: relative;
+	box-sizing: border-box;
+	width: var(--drawer-width);
+	max-width: 100%;
+	min-height: 0;
+	clip-path: inset(0 0 0 -48px);
+}
+
+.panelBody {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-height: 0;
+	overflow-y: auto;
+}
+
+/* Barely there: enough to say "a press here closes the details", not
+   enough to read as a modal. */
+.panelScrim {
+	display: block;
+	padding: 0;
+	border: 0;
+	background-color: oklch(0% 0 0 / 0.06);
+	cursor: default;
+	transition: opacity 200ms ease-out;
+}
+
+:global(:root[data-theme="dark"]) .panelScrim {
+	background-color: oklch(0% 0 0 / 0.18);
+}
+
+.panelScrim[data-state="closed"] {
+	opacity: 0;
+	pointer-events: none;
+	transition-duration: 150ms;
+}
+
+/* The drawer's leading edge: a thin grab area over the hairline, drawn
+   only while it has keyboard focus, as on the sidebar. */
+.resizer {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: -3px;
+	z-index: 2;
+	width: 6px;
+	cursor: col-resize;
+	touch-action: none;
+}
+
+.resizer:focus-visible {
+	outline: none;
+	box-shadow: inset 2px 0 0 var(--ctd-focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.panelScrim {
+		transition: none;
+	}
+}
+
+/* Phones: the details take the whole screen, as a sheet would. */
+@media (max-width: 36em) {
+	.panel {
+		position: fixed;
+		inset: 0;
+		z-index: 111;
+		width: auto;
+		max-width: none;
+		border-left: 0;
+		clip-path: none;
+	}
+
+	.resizer {
+		display: none;
+	}
 }
 
 .content:focus {
