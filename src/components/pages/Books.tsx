@@ -409,10 +409,15 @@ export const Books = ({
 			{/*
 			 * The scroll region is the listbox VoiceOver reads: it keeps focus
 			 * while arrows move the cursor (aria-activedescendant), since the
-			 * virtualized cards come and go.
+			 * virtualized cards come and go. Its keys live in use-library-keymap;
+			 * the role is spread in only while the grid shows, which the
+			 * linter can't see.
 			 */}
+			{/* biome-ignore lint/a11y/noStaticElementInteractions: a listbox while the grid shows (see above). */}
+			{/* biome-ignore lint/a11y/useKeyWithClickEvents: the click only clears the selection; Escape does that from the keyboard. */}
 			<div
 				ref={gridContainerRef}
+				// biome-ignore lint/a11y/noNoninteractiveTabindex: a listbox while the grid shows (see above).
 				tabIndex={0}
 				style={{ outline: "none" }}
 				className={clsx(

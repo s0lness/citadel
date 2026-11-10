@@ -21,8 +21,7 @@ const Plus = () => (
 
 /**
  * Every regular control at --ctd-control-height (24px on desktop-sized
- * screens, 36px on touch), on one baseline. The hairline marks the shared
- * top and bottom edges.
+ * screens, 36px on touch), sharing one row.
  */
 const Row = () => {
 	const [query, setQuery] = useState("");
@@ -37,12 +36,6 @@ const Row = () => {
 					alignItems: "center",
 					gap: 8,
 					flexWrap: "wrap",
-					backgroundImage:
-						"linear-gradient(var(--ctd-border-strong), var(--ctd-border-strong)), linear-gradient(var(--ctd-border-strong), var(--ctd-border-strong))",
-					backgroundSize: "100% 1px, 100% 1px",
-					backgroundPosition:
-						"0 calc(50% - var(--ctd-control-height) / 2), 0 calc(50% + var(--ctd-control-height) / 2)",
-					backgroundRepeat: "no-repeat",
 					padding: "12px 0",
 				}}
 			>

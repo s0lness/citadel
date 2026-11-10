@@ -160,17 +160,12 @@ export const useBookGridInteraction = (
 			.getElementById(bookCardDomId(book.id))
 			?.querySelector("img, [style]");
 		const rect = card?.getBoundingClientRect() ?? null;
-		cardActions.onContextMenu(
-			contextMenuPoint(event, rect),
-			cursor,
-			book,
-		);
+		cardActions.onContextMenu(contextMenuPoint(event, rect), cursor, book);
 	};
 
 	const onBackgroundClick = (event: React.MouseEvent) => {
 		if (!(event.target instanceof Element)) return;
-		if (event.target.closest("[data-book-id], button, a, input, label"))
-			return;
+		if (event.target.closest("[data-book-id], button, a, input, label")) return;
 		updateBookSelection(clearSelection);
 	};
 

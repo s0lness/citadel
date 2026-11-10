@@ -1,8 +1,17 @@
+import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { commands } from "@/bindings";
 import { localFile } from "../local-file";
 import type { WindowAdapter } from "../types";
+import { distinct } from "./distinct";
+
+// The drag plugin needs an image; this one shows nothing.
+const BLANK_PNG =
+	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
+const dragIconFor = async (path: string): Promise<string> =>
+	(await commands.clbQueryFileIcon(path)) ?? BLANK_PNG;
 
 export const createTauriWindow = (): WindowAdapter => ({
 	isMain: getCurrentWindow().label === "main",
@@ -35,4 +44,29 @@ export const createTauriWindow = (): WindowAdapter => ({
 					break;
 			}
 		}),
+	startDrag: async (files, iconPath) => {
+		const [first] = files;
+		if (first === undefined) return;
+		const icon = iconPath ?? (await dragIconFor(first));
+		await startDrag({ item: files, icon, mode: "copy" });
+	},
+	onActiveChange: async (handler) => {
+		const window = getCurrentWindow();
+		const report = distinct(handler);
+		const unlisten = await window.onFocusChanged(({ payload }) =>
+			report(payload),
+		);
+		report(await window.isFocused());
+		return unlisten;
+	},
+	// macOS reports the end of a full-screen transition as a resize.
+	onFullscreenChange: async (handler) => {
+		const window = getCurrentWindow();
+		const report = distinct(handler);
+		const unlisten = await window.onResized(async () =>
+			report(await window.isFullscreen()),
+		);
+		report(await window.isFullscreen());
+		return unlisten;
+	},
 });

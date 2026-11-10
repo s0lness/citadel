@@ -57,6 +57,7 @@ export const BookCard = React.memo(function BookCard({
 	const authors = formatAuthorList(book.author_list);
 
 	return (
+		// biome-ignore lint/a11y/useFocusableInteractive: the listbox keeps focus and points at the cursor's option with aria-activedescendant; options are never focused themselves.
 		<div
 			className={classes.cell}
 			data-book-id={book.id}

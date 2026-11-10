@@ -5,7 +5,7 @@ import {
 	createRouter,
 	RouterProvider,
 } from "@tanstack/react-router";
-import { type CSSProperties, useMemo } from "react";
+import { type CSSProperties, createContext, useContext, useMemo } from "react";
 import { ContextMenu, type ContextMenuState } from "@/components/ui";
 import { createWebPlatform } from "@/lib/platform/create";
 import { PlatformProvider } from "@/lib/platform/context";
@@ -64,63 +64,66 @@ interface FrameProps extends SidebarViewProps {
 	menu?: ContextMenuState;
 }
 
+const FrameArgs = createContext<FrameProps | null>(null);
+
 /**
  * The window around the sidebar: toolbar strip, the sidebar on the window
  * material, and the content panel with its hairlines and corner.
  */
-const Frame = ({ width, menu, ...props }: FrameProps) => {
+const Window = () => {
+	const args = useContext(FrameArgs);
+	if (!args) return null;
+	const { width, menu, ...props } = args;
+	return (
+		<div
+			style={{
+				display: "flex",
+				flexDirection: "column",
+				height: 520,
+				width: width + 360,
+				background: "var(--ctd-shell-gradient)",
+				border: "1px solid var(--ctd-border)",
+				borderRadius: 10,
+				overflow: "hidden",
+			}}
+		>
+			<div style={{ height: 46, flexShrink: 0 }} />
+			<div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+				<div style={{ width, flexShrink: 0, background: "var(--ctd-nav-bg)" }}>
+					<SidebarView {...props} />
+					{menu && <ContextMenu menu={menu} onClose={noop} />}
+				</div>
+				<div
+					style={
+						{
+							flex: 1,
+							background: "var(--ctd-content-bg)",
+							borderTop: "1px solid var(--ctd-border)",
+							borderLeft: "1px solid var(--ctd-border)",
+							borderTopLeftRadius: "var(--ctd-radius-panel)",
+						} as CSSProperties
+					}
+				/>
+			</div>
+		</div>
+	);
+};
+
+const Frame = (args: FrameProps) => {
 	const platform = useMemo(createWebPlatform, []);
 	const router = useMemo(
 		() =>
 			createRouter({
-				routeTree: createRootRoute({
-					component: () => (
-						<div
-							style={{
-								display: "flex",
-								flexDirection: "column",
-								height: 520,
-								width: width + 360,
-								background: "var(--ctd-shell-gradient)",
-								border: "1px solid var(--ctd-border)",
-								borderRadius: 10,
-								overflow: "hidden",
-							}}
-						>
-							<div style={{ height: 46, flexShrink: 0 }} />
-							<div style={{ display: "flex", flex: 1, minHeight: 0 }}>
-								<div
-									style={{
-										width,
-										flexShrink: 0,
-										background: "var(--ctd-nav-bg)",
-									}}
-								>
-									<SidebarView {...props} />
-									{menu && <ContextMenu menu={menu} onClose={noop} />}
-								</div>
-								<div
-									style={
-										{
-											flex: 1,
-											background: "var(--ctd-content-bg)",
-											borderTop: "1px solid var(--ctd-border)",
-											borderLeft: "1px solid var(--ctd-border)",
-											borderTopLeftRadius: "var(--ctd-radius-panel)",
-										} as CSSProperties
-									}
-								/>
-							</div>
-						</div>
-					),
-				}),
+				routeTree: createRootRoute({ component: Window }),
 				history: createMemoryHistory(),
 			}),
-		[width, menu, props],
+		[],
 	);
 	return (
 		<PlatformProvider value={platform}>
-			<RouterProvider router={router} />
+			<FrameArgs.Provider value={args}>
+				<RouterProvider router={router} />
+			</FrameArgs.Provider>
 		</PlatformProvider>
 	);
 };

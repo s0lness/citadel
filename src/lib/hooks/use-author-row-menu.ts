@@ -14,7 +14,10 @@ export interface AuthorRowMenu {
 	menu: ContextMenuController;
 	/** The row's link, where focus goes back to when the menu closes. */
 	returnFocusRef: React.RefObject<HTMLElement | null>;
-	openFor: (event: React.MouseEvent<HTMLElement>, author: LibraryAuthor) => void;
+	openFor: (
+		event: React.MouseEvent<HTMLElement>,
+		author: LibraryAuthor,
+	) => void;
 }
 
 /**

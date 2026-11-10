@@ -257,4 +257,3 @@ const BookCardPlaceholder = () => (
 		<span className={cardClasses.coverPlaceholder} />
 	</div>
 );
-

@@ -89,7 +89,11 @@ const makeBooks = (count: number, local: boolean): LibraryBook[] =>
 							},
 						},
 					]
-				: [{ Remote: { url: `https://books.example/files/EPUB/${name}.epub` } }],
+				: [
+						{
+							Remote: { url: `https://books.example/files/EPUB/${name}.epub` },
+						},
+					],
 			cover_image: null,
 			identifier_list: [],
 			is_read: index % 5 === 3,
@@ -169,16 +173,25 @@ const desktopPlatform = (os: OperatingSystem): PlatformAdapter => {
 			openPath: log("open"),
 			revealInFileManager: log("reveal"),
 			quickLook: log("quick look"),
+			defaultApp: async () => null,
 		},
 		window: { ...web.window, startDrag: log("start drag") },
 		clipboard: { writeText: log("copy") },
 	};
 };
 
-const webPlatform = (os: OperatingSystem): PlatformAdapter => ({
-	...createWebPlatform(),
-	os,
-});
+const webPlatform = (os: OperatingSystem): PlatformAdapter => {
+	const web = createWebPlatform();
+	return {
+		...web,
+		os,
+		fileOpener: {
+			...web.fileOpener,
+			quickLook: async () => {},
+			defaultApp: async () => null,
+		},
+	};
+};
 
 interface FrameProps {
 	platform: PlatformAdapter;

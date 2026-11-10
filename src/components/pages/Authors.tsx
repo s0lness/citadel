@@ -441,6 +441,7 @@ const AuthorRow = ({
 		// The whole row links to the library filtered by this author. The hover
 		// background, 40px min-height, and the overlay-link positioning live in
 		// styles.css (.ctd-author-row / .ctd-author-row-link).
+		// biome-ignore lint/a11y/noStaticElementInteractions: the Menu key on the row's focused link bubbles the same contextmenu event here.
 		<div
 			className={clsx("ctd-author-row", styles.row, styles.grid)}
 			onContextMenu={(event) => onContextMenu(event, author)}

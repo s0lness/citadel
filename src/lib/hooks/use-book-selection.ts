@@ -247,15 +247,13 @@ export const useBookSelectionActions = (): BookSelectionActions => {
 	const { selectedCount, allFinished } = menuContext;
 	const { fileOpener } = platform;
 
-	const withBooks = (
-		action: (books: LibraryBook[]) => Promise<unknown> | void,
-	) =>
+	const withBooks = (action: (books: LibraryBook[]) => unknown) =>
 		safeAsyncEventHandler(async () => {
 			const books = await resolveSelectedBooks();
 			if (books.length > 0) await action(books);
 		});
 
-	const first = (action: (book: LibraryBook) => Promise<unknown> | void) =>
+	const first = (action: (book: LibraryBook) => unknown) =>
 		withBooks((books) => {
 			const [book] = books;
 			if (book !== undefined) return action(book);
