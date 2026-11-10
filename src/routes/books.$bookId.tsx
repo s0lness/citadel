@@ -134,7 +134,7 @@ const EditBookRoute = () => {
 		return (
 			<div style={centeredFill}>
 				<div>
-					<p>This library is read-only.</p>
+					<p>You can view this library but not edit its books.</p>
 					<Button onClick={() => void navigate({ to: "/", replace: true })}>
 						Back to library
 					</Button>
