@@ -60,11 +60,13 @@ pub fn save_window_state<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
-/// The platform sidebar material behind the transparent webview, as in
-/// Apple's own apps; it goes flat while the window is not in front. The
-/// `windowEffects` config on the window never attaches (bare window
-/// backing shows through instead); applying the same effects after the
-/// window exists does work.
+/// Glass behind the transparent webview: the popover material, which lets
+/// the desktop's colour read through. It goes flat while the window is not
+/// in front. The platform sidebar material (`Effect::Sidebar`, as in Apple's
+/// own apps) was tried in CDL-90 and rejected by the owner on seeing it: it
+/// smears the backdrop into a uniform grey. The `windowEffects` config on
+/// the window never attaches (bare window backing shows through instead);
+/// applying the same effects after the window exists does work.
 #[cfg(target_os = "macos")]
 pub fn apply_glass<R: Runtime>(window: &WebviewWindow<R>) {
     use tauri::{
@@ -72,7 +74,7 @@ pub fn apply_glass<R: Runtime>(window: &WebviewWindow<R>) {
         window::{Effect, EffectState},
     };
     if let Err(err) = window.set_effects(WindowEffectsConfig {
-        effects: vec![Effect::Sidebar],
+        effects: vec![Effect::Popover],
         state: Some(EffectState::FollowsWindowActiveState),
         radius: None,
         color: None,

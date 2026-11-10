@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import {
 	type EdgeResize,
 	ResizeEdge,
@@ -10,36 +10,30 @@ import {
 	useBookDrawer,
 } from "@/stores/book-drawer/store";
 
-const useElementWidth = (
-	ref: RefObject<HTMLElement | null>,
-	active: boolean,
-): number | null => {
+const useParentWidth = (child: HTMLElement | null): number | null => {
 	const [width, setWidth] = useState<number | null>(null);
-	useEffect(() => {
-		const element = ref.current;
-		if (!active || !element) return;
+	useLayoutEffect(() => {
+		const element = child?.parentElement;
+		if (!element) return;
 		setWidth(element.clientWidth);
 		if (typeof ResizeObserver === "undefined") return;
 		const observer = new ResizeObserver(() => setWidth(element.clientWidth));
 		observer.observe(element);
 		return () => observer.disconnect();
-	}, [ref, active]);
+	}, [child]);
 	return width;
 };
 
 /**
  * The book drawer's left edge. The width shown never exceeds 70% of the
- * panel the drawer sits in (`panelRef`); a drag past that stops there, so
- * the stored width is always one the user saw.
+ * panel the drawer (`drawer`, while mounted) sits in; a drag past that
+ * stops there, so the stored width is always one the user saw.
  */
-export const useBookDrawerResize = (
-	panelRef: RefObject<HTMLElement | null>,
-	open: boolean,
-): EdgeResize => {
+export const useBookDrawerResize = (drawer: HTMLElement | null): EdgeResize => {
 	const stored = useBookDrawer((s) => s.width);
 	const setStored = useBookDrawer((s) => s.setWidth);
 	const resetWidth = useBookDrawer((s) => s.resetWidth);
-	const max = bookDrawerMaxWidth(useElementWidth(panelRef, open));
+	const max = bookDrawerMaxWidth(useParentWidth(drawer));
 	return useEdgeResize({
 		width: Math.min(stored, max),
 		min: BOOK_DRAWER_WIDTH.min,

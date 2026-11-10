@@ -25,8 +25,10 @@ import { downloadFile } from "@/lib/download";
 import { usePlatform } from "@/lib/platform/context";
 import type { PlatformAdapter } from "@/lib/platform/types";
 import { BookDeletion, type TBookDeletion } from "@/lib/services/library";
+import { type FinishedChange, finishedEntry } from "@/lib/undo-history";
 import { useLibraryStore } from "@/stores/library/store";
 import { useLibraryView } from "@/stores/library-view/store";
+import { registerUndo } from "@/stores/undo/store";
 
 interface DeleteRequest {
 	books: LibraryBook[];
@@ -98,6 +100,33 @@ export const resolveSelectedBooks = async (): Promise<LibraryBook[]> => {
 export const openBookDetails = (book: LibraryBook) =>
 	useBookSelectionStore.setState({ detailsBook: book, detailsOpen: true });
 
+/** The open details follow the keyboard onto another book. */
+export const followWithDetails = (book: LibraryBook) => {
+	const { detailsOpen, detailsBook } = useBookSelectionStore.getState();
+	if (detailsOpen && detailsBook?.id !== book.id)
+		useBookSelectionStore.setState({ detailsBook: book });
+};
+
+/**
+ * A double-click: the book's preferred file opens in its default app on
+ * the desktop, or downloads in the browser.
+ */
+export const openBookFile = (
+	book: LibraryBook,
+	{ capabilities, fileOpener }: Pick<PlatformAdapter, "capabilities" | "fileOpener">,
+) => {
+	if (capabilities.canOpenLocalPaths) {
+		const path = primaryLocalPath(book);
+		if (path !== null)
+			fileOpener
+				.openPath(path)
+				.catch((error: unknown) => console.error("Open book:", error));
+		return;
+	}
+	const file = primaryRemoteFile(book);
+	if (file !== null) downloadFile(file.url);
+};
+
 export const closeBookDetails = () =>
 	useBookSelectionStore.setState({ detailsOpen: false });
 
@@ -157,7 +186,7 @@ export interface BookSelectionActions {
 	/** What the menus may offer here, for `bookMenuEntries`. */
 	menuContext: BookMenuContext;
 	showDetails(): void;
-	read(): void;
+	open(): void;
 	edit(): void;
 	quickLook(): void;
 	toggleFinished(): void;
@@ -196,7 +225,7 @@ export const bookMenuContext = ({
 	return {
 		selectedCount,
 		allFinished: loaded.length > 0 && loaded.every((book) => book.is_read),
-		canRead: capabilities.canOpenLocalPaths,
+		canOpen: capabilities.canOpenLocalPaths,
 		canEdit,
 		canQuickLook: capabilities.canQuickLook,
 		canShowInFileManager: capabilities.canRevealInFileManager,
@@ -260,7 +289,7 @@ export const useBookSelectionActions = (): BookSelectionActions => {
 		});
 
 	const showDetails = first(openBookDetails);
-	const read = withBooks(async (books) => {
+	const open = withBooks(async (books) => {
 		for (const path of books.map(primaryLocalPath))
 			if (path !== null) await fileOpener.openPath(path);
 	});
@@ -275,9 +304,19 @@ export const useBookSelectionActions = (): BookSelectionActions => {
 	const toggleFinished = withBooks(async (books) => {
 		const finished = !books.every((book) => book.is_read);
 		const { actions } = useLibraryStore.getState();
-		for (const book of books)
-			if (book.is_read !== finished)
-				await actions.updateBook(book.id, fullUpdate(finished));
+		const setFinished = (id: string, isRead: boolean) =>
+			actions.updateBook(id, fullUpdate(isRead), { registersUndo: true });
+		const changed: FinishedChange[] = [];
+		try {
+			for (const book of books) {
+				if (book.is_read === finished) continue;
+				await setFinished(book.id, finished);
+				changed.push({ id: book.id, wasFinished: book.is_read });
+			}
+		} finally {
+			if (changed.length > 0)
+				registerUndo(finishedEntry(changed, finished, setFinished));
+		}
 		if (finished && useLibraryView.getState().hideRead)
 			updateBookSelection(clearSelection);
 	});
@@ -301,7 +340,7 @@ export const useBookSelectionActions = (): BookSelectionActions => {
 
 	const handlers: Record<TBookCommand, () => void> = {
 		[BOOK_COMMAND.showDetails]: showDetails,
-		[BOOK_COMMAND.read]: read,
+		[BOOK_COMMAND.open]: open,
 		[BOOK_COMMAND.edit]: edit,
 		[BOOK_COMMAND.quickLook]: quickLook,
 		[BOOK_COMMAND.toggleFinished]: toggleFinished,
@@ -316,7 +355,7 @@ export const useBookSelectionActions = (): BookSelectionActions => {
 		allFinished,
 		menuContext,
 		showDetails,
-		read,
+		open,
 		edit,
 		quickLook,
 		toggleFinished,

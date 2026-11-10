@@ -9,9 +9,10 @@ export const DrawerPlacement = {
 	/** Modal, over the whole window, behind a scrim. */
 	window: "window",
 	/**
-	 * Non-modal, inside the page that renders it: the page places it (and
-	 * the scrim, if any) with `className`/`scrimClassName`; toolbar and
-	 * sidebar stay usable, and only a press on the scrim or Escape closes it.
+	 * A non-modal inspector inside the page that renders it (placed with
+	 * `className`), with no scrim: what it sits beside stays usable, and a
+	 * press outside never closes it. Escape, the close button or the page
+	 * (`open`) do.
 	 */
 	panel: "panel",
 } as const;
@@ -44,8 +45,6 @@ export interface DrawerProps {
 	placement?: DrawerPlacement;
 	/** Panel placement: positions the drawer within its page. */
 	className?: string;
-	/** Panel placement: positions a scrim that closes the drawer on a press. */
-	scrimClassName?: string;
 	/** Panel placement: a resize handle on the drawer's leading edge. */
 	resizeHandleProps?: HTMLAttributes<HTMLDivElement>;
 	contentRef?: Ref<HTMLDivElement>;
@@ -108,22 +107,10 @@ const PanelDrawer = ({
 	onOpenAutoFocus,
 	bleed = false,
 	className,
-	scrimClassName,
 	resizeHandleProps,
 	contentRef,
 }: DrawerProps) => (
 	<Dialog.Root open={open} onOpenChange={onOpenChange} modal={false}>
-		{scrimClassName !== undefined && (
-			<button
-				type="button"
-				tabIndex={-1}
-				aria-hidden={!open || undefined}
-				aria-label="Close Details"
-				className={clsx(styles.panelScrim, scrimClassName)}
-				data-state={open ? "open" : "closed"}
-				onClick={() => onOpenChange(false)}
-			/>
-		)}
 		<Dialog.Content
 			ref={contentRef}
 			className={clsx(styles.content, styles.panel, className)}
@@ -133,8 +120,8 @@ const PanelDrawer = ({
 			aria-describedby={undefined}
 			onCloseAutoFocus={onCloseAutoFocus}
 			onOpenAutoFocus={onOpenAutoFocus}
-			// Presses on the toolbar, sidebar or search keep the drawer open;
-			// the scrim over the grid is what closes it.
+			// A press on another cover switches the book; the page decides
+			// when a press outside closes the drawer.
 			onInteractOutside={preventDefault}
 		>
 			{resizeHandleProps && (

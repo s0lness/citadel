@@ -17,7 +17,7 @@ pub enum MenuCommand {
     Redo,
     SelectAll,
     BookShowDetails,
-    BookRead,
+    BookOpen,
     BookEdit,
     BookMarkFinished,
     BookShowInFileManager,
@@ -52,7 +52,7 @@ const SIMPLE_COMMANDS: [MenuCommand; 28] = [
     MenuCommand::Redo,
     MenuCommand::SelectAll,
     MenuCommand::BookShowDetails,
-    MenuCommand::BookRead,
+    MenuCommand::BookOpen,
     MenuCommand::BookEdit,
     MenuCommand::BookMarkFinished,
     MenuCommand::BookShowInFileManager,
@@ -93,7 +93,7 @@ impl MenuCommand {
             Self::Redo => "redo",
             Self::SelectAll => "select-all",
             Self::BookShowDetails => "book-show-details",
-            Self::BookRead => "book-read",
+            Self::BookOpen => "book-open",
             Self::BookEdit => "book-edit",
             Self::BookMarkFinished => "book-mark-finished",
             Self::BookShowInFileManager => "book-show-in-file-manager",
@@ -182,7 +182,12 @@ pub struct MenuState {
     pub sort_order: MenuSortOrder,
     pub libraries: Vec<MenuLibrary>,
     pub update_ready_version: Option<String>,
-    pub editing_book: bool,
+    /// Undo and Redo act on the app's undo history (no text field has the
+    /// keyboard), rather than being the native text-editing items.
+    pub app_undo: bool,
+    /// "Undo Mark as Finished"; `None` when there is nothing to undo.
+    pub undo_label: Option<String>,
+    pub redo_label: Option<String>,
 }
 
 impl Default for MenuState {
@@ -195,7 +200,9 @@ impl Default for MenuState {
             sort_order: MenuSortOrder::NameAz,
             libraries: Vec::new(),
             update_ready_version: None,
-            editing_book: false,
+            app_undo: false,
+            undo_label: None,
+            redo_label: None,
         }
     }
 }
@@ -236,7 +243,13 @@ pub struct MenuStatePatch {
     pub update_ready_version: Option<Option<String>>,
     #[specta(optional)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub editing_book: Option<bool>,
+    pub app_undo: Option<bool>,
+    #[specta(optional)]
+    #[serde(deserialize_with = "present", skip_serializing_if = "Option::is_none")]
+    pub undo_label: Option<Option<String>>,
+    #[specta(optional)]
+    #[serde(deserialize_with = "present", skip_serializing_if = "Option::is_none")]
+    pub redo_label: Option<Option<String>>,
 }
 
 impl MenuState {
@@ -256,7 +269,9 @@ impl MenuState {
             update_ready_version: patch
                 .update_ready_version
                 .unwrap_or(current.update_ready_version),
-            editing_book: patch.editing_book.unwrap_or(current.editing_book),
+            app_undo: patch.app_undo.unwrap_or(current.app_undo),
+            undo_label: patch.undo_label.unwrap_or(current.undo_label),
+            redo_label: patch.redo_label.unwrap_or(current.redo_label),
         }
     }
 }
@@ -279,7 +294,7 @@ impl ItemView {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BookMenuView {
     pub show_details: ItemView,
-    pub read: ItemView,
+    pub open: ItemView,
     pub edit: ItemView,
     pub mark_finished: ItemView,
     pub show_in_file_manager: ItemView,
@@ -296,7 +311,23 @@ pub struct MenuView {
     pub sort_order: MenuSortOrder,
     pub libraries: Vec<MenuLibrary>,
     pub restart_to_update: bool,
-    pub editing_book: bool,
+    /// Undo and Redo as the app's own items; `None` keeps the native ones.
+    pub undo: Option<UndoMenuView>,
+}
+
+/// Edit > Undo and Redo, naming what they would do and disabled when there
+/// is nothing to, as NSUndoManager's items are.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UndoMenuView {
+    pub undo: ItemView,
+    pub redo: ItemView,
+}
+
+pub fn undo_menu_view(undo_label: Option<&str>, redo_label: Option<&str>) -> UndoMenuView {
+    UndoMenuView {
+        undo: ItemView::new(undo_label.unwrap_or("Undo"), undo_label.is_some()),
+        redo: ItemView::new(redo_label.unwrap_or("Redo"), redo_label.is_some()),
+    }
 }
 
 pub const RESTART_TO_UPDATE_LABEL: &str = "Restart to Update…";
@@ -306,7 +337,7 @@ fn books(count: u32) -> String {
 }
 
 /// Labels for the Book menu, matching the book's right-click menu
-/// (`src/lib/book-menu.ts`). Read, Mark, Copy and Delete act on the whole
+/// (`src/lib/book-menu.ts`). Open, Mark, Copy and Delete act on the whole
 /// selection; the rest need exactly one book.
 pub fn book_menu_view(selected: u32, all_finished: bool, file_manager_name: &str) -> BookMenuView {
     let single = selected == 1;
@@ -319,11 +350,11 @@ pub fn book_menu_view(selected: u32, all_finished: bool, file_manager_name: &str
     };
     BookMenuView {
         show_details: ItemView::new("Show Details", single),
-        read: ItemView::new(
+        open: ItemView::new(
             if plural {
-                format!("Read {}", books(selected))
+                format!("Open {}", books(selected))
             } else {
-                "Read".to_string()
+                "Open".to_string()
             },
             any,
         ),
@@ -365,7 +396,9 @@ pub fn menu_view(state: &MenuState, file_manager_name: &str) -> MenuView {
         sort_order: state.sort_order,
         libraries: state.libraries.clone(),
         restart_to_update: state.update_ready_version.is_some(),
-        editing_book: state.editing_book,
+        undo: state
+            .app_undo
+            .then(|| undo_menu_view(state.undo_label.as_deref(), state.redo_label.as_deref())),
     }
 }
 
@@ -379,7 +412,7 @@ pub struct MenuChanges {
     pub sort_order: bool,
     pub libraries: bool,
     pub restart_to_update: bool,
-    pub editing_book: bool,
+    pub undo: bool,
 }
 
 #[cfg(test)]
@@ -391,7 +424,7 @@ impl MenuChanges {
             || self.sort_order
             || self.libraries
             || self.restart_to_update
-            || self.editing_book
+            || self.undo
     }
 }
 
@@ -404,7 +437,7 @@ pub fn menu_changes(previous: Option<&MenuView>, next: &MenuView) -> MenuChanges
             sort_order: true,
             libraries: true,
             restart_to_update: true,
-            editing_book: true,
+            undo: true,
         };
     };
     MenuChanges {
@@ -414,7 +447,7 @@ pub fn menu_changes(previous: Option<&MenuView>, next: &MenuView) -> MenuChanges
         sort_order: previous.sort_order != next.sort_order,
         libraries: previous.libraries != next.libraries,
         restart_to_update: previous.restart_to_update != next.restart_to_update,
-        editing_book: previous.editing_book != next.editing_book,
+        undo: previous.undo != next.undo,
     }
 }
 
@@ -486,13 +519,16 @@ mod tests {
         let patch: MenuStatePatch = serde_json::from_value(serde_json::json!({
             "sortOrder": "authorZa",
             "libraries": [{ "id": "l1", "name": "Books", "active": true }],
-            "editingBook": true,
+            "appUndo": true,
+            "undoLabel": "Undo Mark as Finished",
         }))
         .unwrap();
         let state = MenuState::default().with(patch);
         assert_eq!(state.sort_order, MenuSortOrder::AuthorZa);
         assert_eq!(state.libraries.len(), 1);
-        assert!(state.editing_book);
+        assert!(state.app_undo);
+        assert_eq!(state.undo_label.as_deref(), Some("Undo Mark as Finished"));
+        assert_eq!(state.redo_label, None);
     }
 
     #[test]
@@ -500,7 +536,7 @@ mod tests {
         let view = book_menu_view(0, false, "Finder");
         for item in [
             &view.show_details,
-            &view.read,
+            &view.open,
             &view.edit,
             &view.mark_finished,
             &view.show_in_file_manager,
@@ -515,7 +551,7 @@ mod tests {
     #[test]
     fn one_book_gets_singular_labels() {
         let view = book_menu_view(1, false, "Finder");
-        assert_eq!(view.read, ItemView::new("Read", true));
+        assert_eq!(view.open, ItemView::new("Open", true));
         assert_eq!(view.mark_finished, ItemView::new("Mark as Finished", true));
         assert_eq!(
             view.show_in_file_manager,
@@ -528,7 +564,7 @@ mod tests {
     #[test]
     fn several_books_get_plural_labels_and_single_book_items_disable() {
         let view = book_menu_view(2, true, "Finder");
-        assert_eq!(view.read, ItemView::new("Read 2 Books", true));
+        assert_eq!(view.open, ItemView::new("Open 2 Books", true));
         assert_eq!(
             view.mark_finished,
             ItemView::new("Mark as Unfinished", true)
@@ -563,7 +599,7 @@ mod tests {
     fn the_first_apply_touches_everything() {
         let view = menu_view(&MenuState::default(), "Finder");
         let changes = menu_changes(None, &view);
-        assert!(changes.book && changes.libraries && changes.editing_book);
+        assert!(changes.book && changes.libraries && changes.undo);
     }
 
     #[test]
@@ -588,5 +624,44 @@ mod tests {
                 ..MenuChanges::default()
             }
         );
+    }
+
+    #[test]
+    fn undo_names_the_action_and_is_disabled_when_there_is_none() {
+        let empty = undo_menu_view(None, None);
+        assert_eq!(empty.undo, ItemView::new("Undo", false));
+        assert_eq!(empty.redo, ItemView::new("Redo", false));
+        let marked = undo_menu_view(Some("Undo Mark as Finished"), None);
+        assert_eq!(marked.undo, ItemView::new("Undo Mark as Finished", true));
+        assert!(!marked.redo.enabled);
+    }
+
+    #[test]
+    fn a_focused_text_field_keeps_the_native_undo_items() {
+        let typing = MenuState {
+            app_undo: false,
+            undo_label: Some("Undo Mark as Finished".into()),
+            ..MenuState::default()
+        };
+        assert_eq!(menu_view(&typing, "Finder").undo, None);
+        let app = MenuState {
+            app_undo: true,
+            ..typing
+        };
+        assert_eq!(
+            menu_view(&app, "Finder").undo.map(|view| view.undo.label),
+            Some("Undo Mark as Finished".to_string())
+        );
+    }
+
+    #[test]
+    fn a_null_undo_label_clears_it() {
+        let state = MenuState {
+            undo_label: Some("Undo Mark as Finished".into()),
+            ..MenuState::default()
+        };
+        let patch: MenuStatePatch =
+            serde_json::from_value(serde_json::json!({ "undoLabel": null })).unwrap();
+        assert_eq!(state.with(patch).undo_label, None);
     }
 }

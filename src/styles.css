@@ -556,7 +556,8 @@ textarea {
  * Window in the background (desktop app; use-window-chrome-state.ts sets
  * data-window-inactive). As on the Mac, the chrome loses its emphasis while
  * another window is in front: the accent the active sidebar row, primary
- * buttons, switches and focus rings take goes grey, and the glass goes flat.
+ * buttons, switches and focus rings take goes grey. The glass goes flat by
+ * itself (NSVisualEffectView follows the window's active state).
  * Token overrides only, so every component follows without its own rule.
  * ========================================================================== */
 :root[data-runtime="desktop"][data-window-inactive] {
@@ -576,10 +577,7 @@ textarea {
 	--ctd-switch-on-knob: oklch(88% 0.004 90);
 }
 
-:root[data-vibrancy][data-window-inactive] {
-	--ctd-shell-gradient: oklch(from var(--pal-mantle) l c h / 0.7);
-}
-
-:root[data-vibrancy][data-window-inactive][data-theme="dark"] {
-	--ctd-shell-gradient: oklch(from var(--pal-mantle) l c h / 0.75);
-}
+/* The glass itself goes flat on its own (the window effect follows the
+   window's active state), so the shell's tint stays the faint one it has
+   while active: no opaque wash that could hide the desktop if this flag
+   were ever wrong. */

@@ -1,6 +1,7 @@
 import * as RadixSelect from "@radix-ui/react-select";
 import clsx from "clsx";
 import { MacPopUpChevrons } from "@/components/icons/MacPopUpChevrons";
+import { useSelectMenuFit } from "@/lib/hooks/use-select-menu-fit";
 import styles from "./Select.module.css";
 
 export interface SelectOption {
@@ -61,45 +62,54 @@ export const Select = ({
 	"aria-label": ariaLabel,
 	id,
 	className,
-}: SelectProps) => (
-	<RadixSelect.Root value={value} onValueChange={onChange} disabled={disabled}>
-		<RadixSelect.Trigger
-			id={id}
-			aria-label={ariaLabel}
-			className={clsx(styles.trigger, className)}
-			style={width !== undefined ? { width } : undefined}
+}: SelectProps) => {
+	const menu = useSelectMenuFit();
+	return (
+		<RadixSelect.Root
+			value={value}
+			onValueChange={onChange}
+			disabled={disabled}
+			open={menu.open}
+			onOpenChange={menu.onOpenChange}
 		>
-			<span className={styles.value}>
-				<RadixSelect.Value placeholder={placeholder} />
-			</span>
-			<span className={styles.chevron}>
-				<MacPopUpChevrons />
-			</span>
-		</RadixSelect.Trigger>
-		<RadixSelect.Portal>
-			{/* Item-aligned positioning sizes the menu to cover the trigger. */}
-			<RadixSelect.Content className={styles.content}>
-				<RadixSelect.ScrollUpButton className={styles.scrollButton}>
-					<ScrollChevron direction="up" />
-				</RadixSelect.ScrollUpButton>
-				<RadixSelect.Viewport>
-					{options.map((option) => (
-						<RadixSelect.Item
-							key={option.value}
-							value={option.value}
-							className={styles.item}
-						>
-							<RadixSelect.ItemIndicator className={styles.indicator}>
-								<CheckmarkIcon />
-							</RadixSelect.ItemIndicator>
-							<RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
-						</RadixSelect.Item>
-					))}
-				</RadixSelect.Viewport>
-				<RadixSelect.ScrollDownButton className={styles.scrollButton}>
-					<ScrollChevron direction="down" />
-				</RadixSelect.ScrollDownButton>
-			</RadixSelect.Content>
-		</RadixSelect.Portal>
-	</RadixSelect.Root>
-);
+			<RadixSelect.Trigger
+				id={id}
+				aria-label={ariaLabel}
+				className={clsx(styles.trigger, className)}
+				style={width !== undefined ? { width } : undefined}
+			>
+				<span className={styles.value}>
+					<RadixSelect.Value placeholder={placeholder} />
+				</span>
+				<span className={styles.chevron}>
+					<MacPopUpChevrons />
+				</span>
+			</RadixSelect.Trigger>
+			<RadixSelect.Portal>
+				{/* Item-aligned positioning sizes the menu to cover the trigger. */}
+				<RadixSelect.Content className={styles.content}>
+					<RadixSelect.ScrollUpButton className={styles.scrollButton}>
+						<ScrollChevron direction="up" />
+					</RadixSelect.ScrollUpButton>
+					<RadixSelect.Viewport ref={menu.viewportRef}>
+						{options.map((option) => (
+							<RadixSelect.Item
+								key={option.value}
+								value={option.value}
+								className={styles.item}
+							>
+								<RadixSelect.ItemIndicator className={styles.indicator}>
+									<CheckmarkIcon />
+								</RadixSelect.ItemIndicator>
+								<RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
+							</RadixSelect.Item>
+						))}
+					</RadixSelect.Viewport>
+					<RadixSelect.ScrollDownButton className={styles.scrollButton}>
+						<ScrollChevron direction="down" />
+					</RadixSelect.ScrollDownButton>
+				</RadixSelect.Content>
+			</RadixSelect.Portal>
+		</RadixSelect.Root>
+	);
+};

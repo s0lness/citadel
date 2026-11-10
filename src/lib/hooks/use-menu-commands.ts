@@ -27,12 +27,17 @@ import {
 	menuStateFor,
 	menuStatePatch,
 	type PushedMenuState,
+	type UndoTitles,
+	undoTitles,
 } from "@/lib/menu-commands";
 import { usePlatform } from "@/lib/platform/context";
 import { useBookEditor } from "@/stores/book-editor/store";
 import { useLibraryView } from "@/stores/library-view/store";
 import { requestFind, setShelfSheetOpen } from "@/stores/menu-requests/store";
 import { toggleSidebar, useSidebar } from "@/stores/sidebar/store";
+import { redoLast, undoLast, useUndoStore } from "@/stores/undo/store";
+import { redoTitle, type UndoHistory, undoTitle } from "@/lib/undo-history";
+import type { PlatformAdapter } from "@/lib/platform/types";
 
 /** Coalesces bursts (a ⇧-click range, focus hopping) into one push. */
 const PUSH_DELAY_MS = 40;
@@ -68,6 +73,59 @@ const useKeyboardBusy = (): boolean => {
 	return busy;
 };
 
+/** Whether the library window is in front, as it changes. */
+const useWindowActive = (platform: PlatformAdapter): boolean => {
+	const [active, setActive] = useState(true);
+	useEffect(() => {
+		let stop: (() => void) | undefined;
+		let cancelled = false;
+		platform.window
+			.onActiveChange(setActive)
+			.then((unlisten) => {
+				if (cancelled) unlisten();
+				else stop = unlisten;
+			})
+			.catch((error: unknown) => console.error("Window focus:", error));
+		return () => {
+			cancelled = true;
+			stop?.();
+		};
+	}, [platform]);
+	return active;
+};
+
+const historyTitles = (history: UndoHistory): UndoTitles => ({
+	undo: undoTitle(history),
+	redo: redoTitle(history),
+});
+
+/** What Edit > Undo and Redo would do right now. */
+const currentUndoTitles = (): UndoTitles =>
+	undoTitles({
+		editor: useBookEditor.getState(),
+		history: historyTitles(useUndoStore.getState().history),
+	});
+
+/**
+ * Edit > Undo / Redo (⌘Z / ⇧⌘Z, Ctrl+Z / Ctrl+Shift+Z off the Mac): a
+ * focused text field's own undo, else the open book editor's, else the
+ * app's undo history.
+ */
+const runUndo = (command: "undo" | "redo") => {
+	if (keyboardBusy()) {
+		document.execCommand(command);
+		return;
+	}
+	const editor = useBookEditor.getState();
+	if (editor.open) {
+		if (command === "undo" && editor.canUndo) editor.undo();
+		return;
+	}
+	(command === "undo" ? undoLast() : redoLast()).catch((error: unknown) =>
+		console.error(`Couldn't ${command}:`, error),
+	);
+};
+
 const BOOKS_PATH = "/";
 
 export interface MenuCommands {
@@ -95,8 +153,19 @@ export const useMenuCommands = (): MenuCommands => {
 	const sidebarVisible = useSidebar((state) => state.visible);
 	const unreadOnly = useLibraryView((state) => state.hideRead);
 	const sortOrder = useLibraryView((state) => state.sortOrder);
-	const editorCanUndo = useBookEditor((state) => state.open && state.canUndo);
+	const editorOpen = useBookEditor((state) => state.open);
+	const editorCanUndo = useBookEditor((state) => state.canUndo);
+	const history = useUndoStore((state) => state.history);
+	const undo = useMemo(
+		() =>
+			undoTitles({
+				editor: { open: editorOpen, canUndo: editorCanUndo },
+				history: historyTitles(history),
+			}),
+		[editorOpen, editorCanUndo, history],
+	);
 	const busy = useKeyboardBusy();
+	const windowActive = useWindowActive(platform);
 
 	const env = useMemo<ShortcutEnvironment>(
 		() => ({
@@ -155,20 +224,9 @@ export const useMenuCommands = (): MenuCommands => {
 			case "switch-library":
 				void switchTo(action.libraryId);
 				return;
-			case "edit": {
-				const editor = useBookEditor.getState();
-				if (
-					action.command === "undo" &&
-					editor.open &&
-					editor.canUndo &&
-					!keyboardBusy()
-				) {
-					editor.undo();
-					return;
-				}
-				document.execCommand(action.command);
+			case "edit":
+				runUndo(action.command);
 				return;
-			}
 			case "select-all":
 				if (keyboardBusy()) document.execCommand("selectAll");
 				else updateBookSelection(selectAll);
@@ -219,6 +277,14 @@ export const useMenuCommands = (): MenuCommands => {
 				};
 			case "history":
 				return { chord, when: () => !overlayOpen(), onMatch };
+			case "edit":
+				// Nothing to undo: the key stays the browser's and the field's.
+				return {
+					chord,
+					when: () =>
+						!keyboardBusy() && currentUndoTitles()[action.command] !== null,
+					onMatch,
+				};
 			default:
 				return {
 					chord,
@@ -237,23 +303,25 @@ export const useMenuCommands = (): MenuCommands => {
 				selectedBookCount: selectionActions.selectedCount,
 				selectionAllFinished: selectionActions.allFinished,
 				keyboardBusy: busy,
+				windowActive,
 				sidebarVisible,
 				unreadOnly,
 				sortOrder,
 				libraries,
 				activeLibraryId: activeLibrary?.id,
-				editorCanUndo,
+				undo,
 			}),
 		[
 			selectionActions.selectedCount,
 			selectionActions.allFinished,
 			busy,
+			windowActive,
 			sidebarVisible,
 			unreadOnly,
 			sortOrder,
 			libraries,
 			activeLibrary?.id,
-			editorCanUndo,
+			undo,
 		],
 	);
 	const pushed = useRef<PushedMenuState | null>(null);

@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { BOOK_COMMAND } from "./book-menu";
 import {
+	EDITOR_UNDO_TITLE,
 	GO_DESTINATIONS,
 	type MenuStateInput,
 	menuAction,
 	menuStateFor,
 	menuStatePatch,
 	needsSelection,
+	undoTitles,
 } from "./menu-commands";
 
 describe("menuAction", () => {
@@ -23,7 +25,7 @@ describe("menuAction", () => {
 			type: "book",
 			command: BOOK_COMMAND.delete,
 		});
-		expect(needsSelection(menuAction("book-read"))).toBe(true);
+		expect(needsSelection(menuAction("book-open"))).toBe(true);
 		expect(needsSelection(menuAction("find"))).toBe(false);
 	});
 
@@ -106,7 +108,8 @@ const input: MenuStateInput = {
 		{ id: "b", displayName: "Papers" },
 	],
 	activeLibraryId: "b",
-	editorCanUndo: false,
+	windowActive: true,
+	undo: { undo: null, redo: null },
 };
 
 describe("menuStateFor", () => {
@@ -124,15 +127,52 @@ describe("menuStateFor", () => {
 		).toBe(0);
 	});
 
-	it("routes Undo to the editor only outside text fields", () => {
-		expect(menuStateFor({ ...input, editorCanUndo: true }).editingBook).toBe(
-			true,
+	it("names Undo after the top entry, and keeps the text field's own Undo while one is focused", () => {
+		const marked = {
+			...input,
+			undo: { undo: "Undo Mark as Finished", redo: null },
+		};
+		expect(menuStateFor(marked)).toMatchObject({
+			appUndo: true,
+			undoLabel: "Undo Mark as Finished",
+			redoLabel: null,
+		});
+		expect(menuStateFor({ ...marked, keyboardBusy: true }).appUndo).toBe(
+			false,
+		);
+	});
+
+	it("leaves Undo native while another window is in front", () => {
+		expect(menuStateFor({ ...input, windowActive: false }).appUndo).toBe(
+			false,
+		);
+	});
+
+	it("offers a disabled Undo when there is nothing to undo", () => {
+		expect(menuStateFor(input)).toMatchObject({
+			appUndo: true,
+			undoLabel: null,
+			redoLabel: null,
+		});
+	});
+});
+
+describe("undoTitles", () => {
+	const history = { undo: "Undo Mark as Finished", redo: "Redo Mark as Finished" };
+
+	it("is the app's history while the editor is closed", () => {
+		expect(
+			undoTitles({ editor: { open: false, canUndo: false }, history }),
+		).toEqual(history);
+	});
+
+	it("is the editor's own Undo, and no Redo, while it is open", () => {
+		expect(undoTitles({ editor: { open: true, canUndo: true }, history })).toEqual(
+			{ undo: EDITOR_UNDO_TITLE, redo: null },
 		);
 		expect(
-			menuStateFor({ ...input, editorCanUndo: true, keyboardBusy: true })
-				.editingBook,
-		).toBe(false);
-		expect(menuStateFor(input).editingBook).toBe(false);
+			undoTitles({ editor: { open: true, canUndo: false }, history }),
+		).toEqual({ undo: null, redo: null });
 	});
 });
 

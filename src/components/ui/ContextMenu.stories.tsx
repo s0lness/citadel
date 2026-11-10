@@ -12,7 +12,7 @@ const BOOK_ITEMS: ContextMenuEntry[] = [
 		shortcut: "⌘I",
 		onSelect: log("Show Details"),
 	},
-	{ id: "read", label: "Read", shortcut: "⌘O", onSelect: log("Read") },
+	{ id: "open", label: "Open", shortcut: "⌘O", onSelect: log("Open") },
 	{
 		id: "quick-look",
 		label: "Quick Look",

@@ -6,6 +6,8 @@ import {
 	Fragment,
 	type KeyboardEvent,
 	type ReactNode,
+	type RefObject,
+	useCallback,
 	useEffect,
 	useLayoutEffect,
 	useRef,
@@ -16,7 +18,13 @@ import { BookCover } from "@/components/atoms/BookCover";
 import { EditGlyph } from "@/components/icons/EditGlyph";
 import { TablerCopy } from "@/components/icons/TablerCopy";
 import { BookFileList } from "@/components/molecules/BookFileList";
-import { Button, ContextMenu, Tooltip } from "@/components/ui";
+import {
+	Button,
+	ContextMenu,
+	Drawer,
+	DrawerPlacement,
+	Tooltip,
+} from "@/components/ui";
 import { safeAsyncEventHandler } from "@/lib/async";
 import {
 	identifierDisplayName,
@@ -24,8 +32,10 @@ import {
 	sortIdentifiers,
 } from "@/lib/book-identifiers";
 import { backdropColors } from "@/lib/cover-palette";
+import { useBookDrawerResize } from "@/lib/hooks/use-book-drawer-resize";
 import { useBookFiles } from "@/lib/hooks/use-book-files";
 import { useCoverPalette } from "@/lib/hooks/use-cover-palette";
+import { useScrolled } from "@/lib/hooks/use-scrolled";
 import { languageNameForCode } from "@/lib/languages";
 import { usePlatform } from "@/lib/platform/context";
 import { formatSeriesIndex } from "@/lib/series";
@@ -42,6 +52,74 @@ interface BookDrawerProps {
 	onClose: () => void;
 }
 
+interface BookDetailsDrawerProps {
+	/** The book to show; kept while the drawer slides closed. */
+	book: LibraryBook | null;
+	open: boolean;
+	onClose: () => void;
+	/** The grid: focus goes back there on close. */
+	returnFocusRef: RefObject<HTMLElement | null>;
+	/** Places the drawer in its page. */
+	className?: string;
+}
+
+/**
+ * The details drawer as the Books page mounts it: an inspector inside the
+ * content panel, as wide as the user last left it.
+ */
+export const BookDetailsDrawer = ({
+	book,
+	open,
+	onClose,
+	returnFocusRef,
+	className,
+}: BookDetailsDrawerProps) => {
+	const contentRef = useRef<HTMLDivElement | null>(null);
+	const [content, setContent] = useState<HTMLDivElement | null>(null);
+	const attachContent = useCallback((element: HTMLDivElement | null) => {
+		contentRef.current = element;
+		setContent(element);
+	}, []);
+	const resize = useBookDrawerResize(content);
+	return (
+		<Drawer
+			placement={DrawerPlacement.panel}
+			open={open}
+			onOpenChange={(next) => {
+				if (!next) onClose();
+			}}
+			width={resize.width}
+			bleed
+			className={className}
+			contentRef={attachContent}
+			resizeHandleProps={resize.handleProps}
+			onOpenAutoFocus={(event) => {
+				// Opened from the grid, the grid keeps focus so arrows move on
+				// through the books; from a menu, land on the primary action.
+				event.preventDefault();
+				if (returnFocusRef.current?.contains(document.activeElement)) return;
+				contentRef.current
+					?.querySelector<HTMLElement>("[data-drawer-initial-focus]")
+					?.focus();
+			}}
+			onCloseAutoFocus={(event) => {
+				// No Dialog.Trigger to return focus to: hand it to the grid,
+				// unless the user has already moved on (into the search field).
+				event.preventDefault();
+				const focused = document.activeElement;
+				if (
+					focused === null ||
+					focused === document.body ||
+					contentRef.current?.contains(focused)
+				)
+					returnFocusRef.current?.focus();
+			}}
+		>
+			{book && <BookDrawer book={book} onClose={onClose} />}
+		</Drawer>
+	);
+};
+
 /**
  * The book at a glance: cover and title over a wash of the cover's own
  * colours with what you can do right under the title, then what it's
@@ -52,6 +130,15 @@ export const BookDrawer = ({ book, onClose }: BookDrawerProps) => {
 	const coverUrl = book.cover_image?.url ?? null;
 	const palette = useCoverPalette(coverUrl);
 	const colors = palette ? backdropColors(palette) : null;
+	const bodyRef = useRef<HTMLDivElement>(null);
+	const drawerRef = useRef<HTMLElement>(null);
+	const scrolled = useScrolled(bodyRef);
+	// Another book starts at its top.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: book.id is the trigger.
+	useLayoutEffect(() => {
+		bodyRef.current?.scrollTo({ top: 0 });
+		drawerRef.current?.scrollTo({ top: 0 });
+	}, [book.id]);
 	const washStyle = colors
 		? ({
 				"--wash-1-light": colors.light[0],
@@ -63,8 +150,10 @@ export const BookDrawer = ({ book, onClose }: BookDrawerProps) => {
 
 	return (
 		<article
+			ref={drawerRef}
 			className={styles.drawer}
 			style={washStyle}
+			data-scrolled={scrolled || undefined}
 			onKeyDown={(event: KeyboardEvent) => files.onKeyDown(event)}
 		>
 			<header className={styles.hero}>
@@ -88,7 +177,7 @@ export const BookDrawer = ({ book, onClose }: BookDrawerProps) => {
 				</div>
 			</header>
 			<Actions book={book} className={styles.phoneActions} />
-			<div className={styles.body}>
+			<div ref={bodyRef} className={clsx(styles.body, "ctd-scroller")}>
 				<Description html={book.description} />
 				<Tags book={book} onClose={onClose} />
 				<Files files={files} />
@@ -155,7 +244,7 @@ const Byline = ({ book, onClose }: BookDrawerProps) => {
 };
 
 /**
- * Read and Edit. Read opens the book in its default app on the desktop; a
+ * Open and Edit. Open opens the book in its default app on the desktop; a
  * browser gets each file's own download button under Files instead.
  */
 const Actions = ({
@@ -188,7 +277,7 @@ const Actions = ({
 					)}
 				>
 					<BookGlyph />
-					Read
+					Open
 				</Button>
 			)}
 			{canEdit && (

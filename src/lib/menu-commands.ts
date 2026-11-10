@@ -41,7 +41,7 @@ export type MenuAction =
 
 const BOOK_COMMANDS: Record<string, TBookCommand> = {
 	"book-show-details": BOOK_COMMAND.showDetails,
-	"book-read": BOOK_COMMAND.read,
+	"book-open": BOOK_COMMAND.open,
 	"book-edit": BOOK_COMMAND.edit,
 	"book-mark-finished": BOOK_COMMAND.toggleFinished,
 	"book-show-in-file-manager": BOOK_COMMAND.showInFileManager,
@@ -118,19 +118,46 @@ export interface MenuStateInput {
 	selectionAllFinished: boolean;
 	/** A text field or a sheet or alert has the keyboard. */
 	keyboardBusy: boolean;
+	/** The library window is in front (another window's fields are its own). */
+	windowActive: boolean;
 	sidebarVisible: boolean;
 	unreadOnly: boolean;
 	sortOrder: LibraryBookSortOrderKey;
 	libraries: { id: string; displayName: string }[];
 	activeLibraryId: string | undefined;
-	/** The book editor is open with a saved change Undo can step back. */
-	editorCanUndo: boolean;
+	/** What Edit > Undo and Redo would do now (`undoTitles`). */
+	undo: UndoTitles;
+}
+
+/** "Undo Mark as Finished" / "Redo …", null where there is nothing to do. */
+export interface UndoTitles {
+	undo: string | null;
+	redo: string | null;
 }
 
 /**
+ * Which undo drives Edit > Undo: the open book editor's own (it steps back
+ * its saves, with no Redo), else the app's undo history. One source at a
+ * time, so the menu never names one and runs the other.
+ */
+export const undoTitles = ({
+	editor,
+	history,
+}: {
+	editor: { open: boolean; canUndo: boolean };
+	history: UndoTitles;
+}): UndoTitles =>
+	editor.open
+		? { undo: editor.canUndo ? EDITOR_UNDO_TITLE : null, redo: null }
+		: history;
+
+export const EDITOR_UNDO_TITLE = "Undo Edit";
+
+/**
  * What the menu bar should show. While someone types or a sheet is up, the
- * Book menu stands down, so ⌘⌫ deletes text instead of books. Undo goes to
- * the book editor only outside text fields, which keep their own undo.
+ * Book menu stands down, so ⌘⌫ deletes text instead of books, and Undo and
+ * Redo are the text field's own. Otherwise they name the app's undo and are
+ * disabled when there is nothing to undo.
  */
 export const menuStateFor = (input: MenuStateInput): PushedMenuState => ({
 	selectedBookCount: input.keyboardBusy ? 0 : input.selectedBookCount,
@@ -143,7 +170,9 @@ export const menuStateFor = (input: MenuStateInput): PushedMenuState => ({
 		name: library.displayName,
 		active: library.id === input.activeLibraryId,
 	})),
-	editingBook: input.editorCanUndo && !input.keyboardBusy,
+	appUndo: input.windowActive && !input.keyboardBusy,
+	undoLabel: input.undo.undo,
+	redoLabel: input.undo.redo,
 });
 
 const sameField = (a: unknown, b: unknown): boolean =>

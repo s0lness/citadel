@@ -4,7 +4,7 @@ import { type BookMenuContext, bookMenuEntries } from "./book-menu";
 const macDesktop: BookMenuContext = {
 	selectedCount: 1,
 	allFinished: false,
-	canRead: true,
+	canOpen: true,
 	canEdit: true,
 	canQuickLook: true,
 	canShowInFileManager: true,
@@ -15,7 +15,7 @@ const macDesktop: BookMenuContext = {
 
 const web: BookMenuContext = {
 	...macDesktop,
-	canRead: false,
+	canOpen: false,
 	canQuickLook: false,
 	canShowInFileManager: false,
 	fileManagerName: "File Manager",
@@ -32,7 +32,7 @@ describe("bookMenuEntries", () => {
 	it("offers the full single-book menu in the Mac app", () => {
 		expect(labels(macDesktop)).toEqual([
 			"Show Details",
-			"Read",
+			"Open",
 			"Edit…",
 			"Quick Look",
 			"---",
@@ -54,7 +54,7 @@ describe("bookMenuEntries", () => {
 		expect(
 			labels({ ...macDesktop, selectedCount: 2, allFinished: true }),
 		).toEqual([
-			"Read 2 Books",
+			"Open 2 Books",
 			"---",
 			"Mark as Unfinished",
 			"---",
@@ -74,7 +74,7 @@ describe("bookMenuEntries", () => {
 		).toContain("Show in File Explorer");
 	});
 
-	it("offers Download instead of Read in a read-only browser library", () => {
+	it("offers Download instead of Open in a read-only browser library", () => {
 		expect(labels(web)).toEqual([
 			"Show Details",
 			"---",

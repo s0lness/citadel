@@ -38,7 +38,7 @@ describe("pageShortcuts", () => {
 			const commands = commandsOf(env);
 			expect(commands).toContain("go-all-books");
 			expect(commands).toContain("go-publishers");
-			expect(commands).toContain("book-read");
+			expect(commands).toContain("book-open");
 			expect(commands).toContain(APP_COMMAND.addBook);
 			expect(commands).toContain(APP_COMMAND.openSettings);
 			expect(commands).not.toContain("toggle-sidebar");
@@ -108,7 +108,7 @@ describe("bookShortcutHint", () => {
 	});
 
 	it("shows Ctrl chords on Windows", () => {
-		expect(bookShortcutHint(BOOK_COMMAND.read, windowsApp)?.label).toBe(
+		expect(bookShortcutHint(BOOK_COMMAND.open, windowsApp)?.label).toBe(
 			"Ctrl+O",
 		);
 		expect(bookShortcutHint(BOOK_COMMAND.delete, windowsApp)?.label).toBe(

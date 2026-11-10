@@ -869,7 +869,7 @@ export type LocalOrRemoteUrl = { kind: LocalOrRemote; url: string; local_path: s
 /**
  * A menu choice delivered to the library window.
  */
-export type MenuCommand = "new-shelf" | "add-library" | "show-library-in-file-manager" | "find" | "undo" | "redo" | "select-all" | "book-show-details" | "book-read" | "book-edit" | "book-mark-finished" | "book-show-in-file-manager" | "book-copy-title" | "book-delete" | "toggle-sidebar" | "toggle-unread-only" | "sort-name-az" | "sort-name-za" | "sort-author-az" | "sort-author-za" | "go-all-books" | "go-authors" | "go-series" | "go-tags" | "go-publishers" | "go-back" | "go-forward" | "restart-to-update" | { switchLibrary: string }
+export type MenuCommand = "new-shelf" | "add-library" | "show-library-in-file-manager" | "find" | "undo" | "redo" | "select-all" | "book-show-details" | "book-open" | "book-edit" | "book-mark-finished" | "book-show-in-file-manager" | "book-copy-title" | "book-delete" | "toggle-sidebar" | "toggle-unread-only" | "sort-name-az" | "sort-name-za" | "sort-author-az" | "sort-author-za" | "go-all-books" | "go-authors" | "go-series" | "go-tags" | "go-publishers" | "go-back" | "go-forward" | "restart-to-update" | { switchLibrary: string }
 /**
  * A menu choice, sent to the library window.
  */
@@ -879,7 +879,7 @@ export type MenuSortOrder = "nameAz" | "nameZa" | "authorAz" | "authorZa"
 /**
  * The fields of [`MenuState`] that changed; absent fields stay as they were.
  */
-export type MenuStatePatch = { selectedBookCount?: number | null; selectionAllFinished?: boolean | null; sidebarVisible?: boolean | null; unreadOnly?: boolean | null; sortOrder?: MenuSortOrder | null; libraries?: MenuLibrary[] | null; updateReadyVersion?: string | null; editingBook?: boolean | null }
+export type MenuStatePatch = { selectedBookCount?: number | null; selectionAllFinished?: boolean | null; sidebarVisible?: boolean | null; unreadOnly?: boolean | null; sortOrder?: MenuSortOrder | null; libraries?: MenuLibrary[] | null; updateReadyVersion?: string | null; appUndo?: boolean | null; undoLabel?: string | null; redoLabel?: string | null }
 /**
  * The metadata sources Citadel can look books up against. The serialized
  * short form is the single id used across the Rust enum, the TS string union,

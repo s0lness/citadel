@@ -62,10 +62,17 @@ export const createTauriWindow = (): WindowAdapter => ({
 	onActiveChange: async (handler) => {
 		const window = getCurrentWindow();
 		const report = distinct(handler);
-		const unlisten = await window.onFocusChanged(({ payload }) =>
-			report(payload),
-		);
-		report(await window.isFocused());
+		// The window starts hidden and is shown after first paint, so the
+		// first answer to isFocused() is often "no". If a focus event has
+		// arrived by the time that answer does, the event is newer: a late
+		// "no" must not leave the window greyed out while it is in front.
+		let heardEvent = false;
+		const unlisten = await window.onFocusChanged(({ payload }) => {
+			heardEvent = true;
+			report(payload);
+		});
+		const focused = await window.isFocused();
+		if (!heardEvent) report(focused);
 		return unlisten;
 	},
 	// macOS reports the end of a full-screen transition as a resize.

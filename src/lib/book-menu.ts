@@ -2,7 +2,7 @@ import { booksTitle, formatCount } from "@/lib/book-count";
 
 export const BOOK_COMMAND = {
 	showDetails: "book-show-details",
-	read: "book-read",
+	open: "book-open",
 	edit: "book-edit",
 	quickLook: "book-quick-look",
 	toggleFinished: "book-mark-finished",
@@ -19,7 +19,7 @@ export interface BookMenuContext {
 	selectedCount: number;
 	allFinished: boolean;
 	/** Books open in their default app (the desktop). */
-	canRead: boolean;
+	canOpen: boolean;
 	/** The library can be changed (not read-only). */
 	canEdit: boolean;
 	canQuickLook: boolean;
@@ -55,8 +55,8 @@ const item = (
 export const finishedLabel = (allFinished: boolean): string =>
 	allFinished ? "Mark as Unfinished" : "Mark as Finished";
 
-export const readLabel = (count: number): string =>
-	count === 1 ? "Read" : `Read ${booksTitle(count)}`;
+export const openLabel = (count: number): string =>
+	count === 1 ? "Open" : `Open ${booksTitle(count)}`;
 
 export const deleteLabel = (count: number): string =>
 	count === 1 ? "Delete…" : `Delete ${booksTitle(count)}…`;
@@ -76,7 +76,7 @@ export const bookMenuEntries = (context: BookMenuContext): BookMenuEntry[] => {
 	const groups: BookMenuEntry[][] = [
 		[
 			...(single ? [item(BOOK_COMMAND.showDetails, "Show Details")] : []),
-			...(context.canRead ? [item(BOOK_COMMAND.read, readLabel(count))] : []),
+			...(context.canOpen ? [item(BOOK_COMMAND.open, openLabel(count))] : []),
 			...(single && context.canEdit ? [item(BOOK_COMMAND.edit, "Edit…")] : []),
 			...(single && context.canQuickLook
 				? [item(BOOK_COMMAND.quickLook, "Quick Look")]

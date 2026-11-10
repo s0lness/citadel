@@ -24,7 +24,9 @@ import { contextMenuPoint, fromKeyboard } from "@/lib/context-menu-point";
 import { dragOutGuard } from "@/lib/drag-out-guard";
 import {
 	bookMenuContext,
+	closeBookDetails,
 	openBookDetails,
+	openBookFile,
 	updateBookSelection,
 	useBookSelectionActions,
 	useBookSelectionStore,
@@ -47,15 +49,17 @@ const supportsDownloadUrlDrag = () =>
 export interface BookGridInteraction {
 	cardActions: BookCardActions;
 	menu: ContextMenuController;
-	/** A click on the grid's empty space clears the selection. */
+	/** A click on the grid's empty space clears the selection and details. */
 	onBackgroundClick: (event: React.MouseEvent) => void;
 	/** The Menu key or Shift-F10 on the grid: the menu for the cursor's book. */
 	onGridContextMenu: (event: React.MouseEvent) => void;
 }
 
 /**
- * How the cover grid answers the pointer: what a click, ⌘-click, ⇧-click,
- * double-click, right-click and drag do on this platform.
+ * How the cover grid answers the pointer: a click shows the book's details,
+ * ⌘-click and ⇧-click build a selection, a double-click opens the file, and
+ * right-click and drag act on the selection. A click on empty grid space
+ * clears the selection and closes the details.
  */
 export const useBookGridInteraction = (
 	books: readonly (LibraryBook | undefined)[],
@@ -71,20 +75,29 @@ export const useBookGridInteraction = (
 			onPress: (index, book, modifiers) => {
 				const { books, platform } = latest.current;
 				const intent = bookClickIntent(modifiers, {
-					clickSelects: platform.capabilities.supportsNativeWindows,
 					isMac: platform.os === "macos",
 				});
-				updateBookSelection((selection) => {
-					switch (intent) {
-						case "toggle":
-							return toggleBook(selection, index, book.id);
-						case "extend":
-							return extendSelection(selection, index, books);
-						default:
-							return selectOnly(index, book.id);
-					}
-				});
-				if (intent === "open") openBookDetails(book);
+				switch (intent) {
+					case "toggle":
+						updateBookSelection((selection) =>
+							toggleBook(selection, index, book.id),
+						);
+						return;
+					case "extend":
+						updateBookSelection((selection) =>
+							extendSelection(selection, index, books),
+						);
+						return;
+					case "show":
+						updateBookSelection(() => selectOnly(index, book.id));
+						openBookDetails(book);
+						return;
+					case "open":
+						openBookFile(book, platform);
+						return;
+					case "none":
+						return;
+				}
 			},
 
 			onContextMenu: (event, index, book) => {
@@ -180,6 +193,7 @@ export const useBookGridInteraction = (
 		if (!(event.target instanceof Element)) return;
 		if (event.target.closest("[data-book-id], button, a, input, label")) return;
 		updateBookSelection(clearSelection);
+		closeBookDetails();
 	};
 
 	return { cardActions, menu, onBackgroundClick, onGridContextMenu };

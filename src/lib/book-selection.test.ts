@@ -234,37 +234,41 @@ describe("selectForContextMenu", () => {
 
 describe("bookClickIntent", () => {
 	const plain = { metaKey: false, ctrlKey: false, shiftKey: false, detail: 1 };
-	const desktopMac = { clickSelects: true, isMac: true };
-	const desktopWindows = { clickSelects: true, isMac: false };
-	const web = { clickSelects: false, isMac: true };
+	const mac = { isMac: true };
+	const windows = { isMac: false };
 
-	it("selects on a click and opens on a double-click in the desktop app", () => {
-		expect(bookClickIntent(plain, desktopMac)).toBe("select");
-		expect(bookClickIntent({ ...plain, detail: 2 }, desktopMac)).toBe("open");
+	it("shows the details on a click and opens the file on a double-click", () => {
+		for (const env of [mac, windows]) {
+			expect(bookClickIntent(plain, env)).toBe("show");
+			expect(bookClickIntent({ ...plain, detail: 2 }, env)).toBe("open");
+		}
 	});
 
-	it("opens on a single click in the browser", () => {
-		expect(bookClickIntent(plain, web)).toBe("open");
+	it("opens once however many clicks follow", () => {
+		expect(bookClickIntent({ ...plain, detail: 3 }, mac)).toBe("none");
+		expect(bookClickIntent({ ...plain, detail: 4 }, mac)).toBe("none");
 	});
 
-	it("toggles with ⌘ on the Mac and Ctrl elsewhere", () => {
-		expect(bookClickIntent({ ...plain, metaKey: true }, desktopMac)).toBe(
+	it("treats a press with no click count (a tap, a synthetic click) as a click", () => {
+		expect(bookClickIntent({ ...plain, detail: 0 }, mac)).toBe("show");
+	});
+
+	it("toggles with ⌘ on the Mac and Ctrl elsewhere, without the details", () => {
+		expect(bookClickIntent({ ...plain, metaKey: true }, mac)).toBe("toggle");
+		expect(bookClickIntent({ ...plain, ctrlKey: true }, mac)).toBe("show");
+		expect(bookClickIntent({ ...plain, ctrlKey: true }, windows)).toBe(
 			"toggle",
 		);
-		expect(bookClickIntent({ ...plain, ctrlKey: true }, desktopMac)).toBe(
-			"select",
-		);
-		expect(bookClickIntent({ ...plain, ctrlKey: true }, desktopWindows)).toBe(
-			"toggle",
-		);
-		expect(bookClickIntent({ ...plain, metaKey: true }, web)).toBe("toggle");
+		expect(
+			bookClickIntent({ ...plain, metaKey: true, detail: 2 }, mac),
+		).toBe("toggle");
 	});
 
-	it("extends with ⇧ everywhere", () => {
-		expect(bookClickIntent({ ...plain, shiftKey: true }, desktopMac)).toBe(
-			"extend",
-		);
-		expect(bookClickIntent({ ...plain, shiftKey: true }, web)).toBe("extend");
+	it("extends with ⇧, even on the second click", () => {
+		expect(bookClickIntent({ ...plain, shiftKey: true }, mac)).toBe("extend");
+		expect(
+			bookClickIntent({ ...plain, shiftKey: true, detail: 2 }, windows),
+		).toBe("extend");
 	});
 });
 

@@ -135,7 +135,7 @@ pub fn follow_software_update<R: Runtime>(app: &AppHandle<R>) {
 
 #[cfg(target_os = "macos")]
 fn deliver(app: &AppHandle, command: MenuCommand) {
-    // Undo and Redo belong to whichever window is editing; everything else
+    // Undo and Redo act on the library window's history where it is; everything else
     // is about the library window, which comes back if it was closed.
     if !matches!(command, MenuCommand::Undo | MenuCommand::Redo) {
         crate::window::show_main_window(app);

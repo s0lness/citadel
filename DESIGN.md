@@ -129,8 +129,19 @@ Follow `docs/adr/0014-in-place-feedback.md` for when to ask at all.
   (Chromium).
 - Bulk actions are Mark as Finished and Delete; one confirmation for delete
   (ADR 0014). The status bar says "2 of 14 selected".
-- **Details drawer:** the overlay drawer stops above the status bar, which
-  stays undimmed above the scrim. Grouped rounded sections ("Files",
+- **Details drawer:** a layer of the content panel, not the window: from the
+  panel's top (under the toolbar) to the status bar, at the panel's right
+  edge, over the grid with a hairline and a left-only shadow. No scrim and
+  non-modal (`DrawerPlacement.panel`): toolbar, sidebar, search and the
+  covers beside it stay live, a click on another cover switches the book,
+  and it closes with Escape, its close button or a click on empty grid. Its
+  left edge resizes it like the sidebar's (380–720 px, never over 70% of the
+  panel; double-click resets; per device). On desktop-sized screens the
+  hero (wash, cover, title, byline, Open and Edit) stays pinned and the body
+  scrolls under a hairline; a short window or narrow drawer gets a smaller
+  cover. Phones get a full-screen sheet that scrolls as one. While the
+  window is in the background the file-type badges and default-app icons
+  lose most of their colour; covers keep theirs. Grouped rounded sections ("Files",
   "Details"), label left, value right. File rows show the file-type icon, the
   format in bold and the filename shortened in the middle. macOS desktop: a
   folder (Show in Finder) and the default app's own icon (Open in …).

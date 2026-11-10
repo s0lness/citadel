@@ -68,3 +68,10 @@
 	fill: oklch(80% 0.004 90);
 	stroke: oklch(0% 0 0 / 0.5);
 }
+
+/* Window in the background: the coloured badge goes quiet with the rest of
+   the chrome, as Finder's icons do. */
+:global(:root[data-runtime="desktop"][data-window-inactive]) .icon {
+	filter: saturate(0.2) opacity(0.8)
+		drop-shadow(0 0.5px 0.75px oklch(0% 0 0 / 0.1));
+}

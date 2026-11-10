@@ -7,6 +7,7 @@ import {
 	selectOnly,
 } from "@/lib/book-selection";
 import {
+	followWithDetails,
 	updateBookSelection,
 	useBookSelectionStore,
 } from "@/lib/hooks/use-book-selection";
@@ -32,6 +33,7 @@ interface LibraryKeymapOptions {
 	 * the selected card mounts and renders its ring.
 	 */
 	scrollToBookIndexRef?: RefObject<((index: number) => void) | null>;
+	/** Return: show the cursor's book in the details drawer. */
 	onBookOpen: (book: LibraryBook) => void;
 	/** Space: Quick Look, where the platform has it. */
 	onQuickLook?: (book: LibraryBook) => void;
@@ -61,6 +63,21 @@ const measureColumns = (container: HTMLElement | null): number => {
 const OVERLAY_SELECTOR = '[role="menu"], [role="dialog"], [role="alertdialog"]';
 const gridOwnsKeyboard = () =>
 	!(document.activeElement?.closest(OVERLAY_SELECTOR) ?? null);
+
+// The details drawer shows the selection, so arrows pressed in it still
+// move through the grid, unless they belong to a control there (a list,
+// a pop-up, a field).
+const ARROW_WIDGETS =
+	'input, textarea, select, [contenteditable="true"], [role="listbox"], [role="menu"], [role="combobox"], [role="tablist"], [role="radiogroup"], [role="slider"], [role="tree"], [role="grid"]';
+const arrowsMoveGrid = (grid: RefObject<HTMLElement | null>) => () => {
+	const focused = document.activeElement;
+	if (focused === null || focused === grid.current || focused === document.body)
+		return true;
+	if (focused.closest('[role="alertdialog"], [role="menu"]')) return false;
+	const inDrawer = focused.closest("[data-drawer]") !== null;
+	if (!inDrawer) return gridOwnsKeyboard();
+	return focused.closest(ARROW_WIDGETS) === null;
+};
 
 export const useLibraryKeymap = ({
 	books,
@@ -106,6 +123,8 @@ export const useLibraryKeymap = ({
 				? extendSelection(current, nextIndex, books)
 				: selectOnly(nextIndex, books[nextIndex]?.id),
 		);
+		const book = books[nextIndex];
+		if (book !== undefined && !extend) followWithDetails(book);
 		revealIndex(nextIndex);
 	};
 
@@ -153,20 +172,6 @@ export const useLibraryKeymap = ({
 				onMatch: () => updateBookSelection(clearSelection),
 			},
 		);
-		for (const [chord, direction] of ARROW_CHORDS) {
-			bindings.push(
-				{
-					chord,
-					when: gridOwnsKeyboard,
-					onMatch: () => moveBy(direction, false),
-				},
-				{
-					chord: `shift+${chord}`,
-					when: gridOwnsKeyboard,
-					onMatch: () => moveBy(direction, true),
-				},
-			);
-		}
 		if (cursorBook !== undefined) {
 			bindings.push({
 				chord: "enter",
@@ -174,6 +179,21 @@ export const useLibraryKeymap = ({
 				onMatch: () => onBookOpen(cursorBook),
 			});
 		}
+	}
+	const arrowsAllowed = arrowsMoveGrid(gridContainerRef);
+	for (const [chord, direction] of ARROW_CHORDS) {
+		bindings.push(
+			{
+				chord,
+				when: arrowsAllowed,
+				onMatch: () => moveBy(direction, false),
+			},
+			{
+				chord: `shift+${chord}`,
+				when: arrowsAllowed,
+				onMatch: () => moveBy(direction, true),
+			},
+		);
 	}
 	if (cursorBook !== undefined && onQuickLook) {
 		bindings.push({

@@ -51,27 +51,6 @@
 	overflow-y: auto;
 }
 
-/* Barely there: enough to say "a press here closes the details", not
-   enough to read as a modal. */
-.panelScrim {
-	display: block;
-	padding: 0;
-	border: 0;
-	background-color: oklch(0% 0 0 / 0.06);
-	cursor: default;
-	transition: opacity 200ms ease-out;
-}
-
-:global(:root[data-theme="dark"]) .panelScrim {
-	background-color: oklch(0% 0 0 / 0.18);
-}
-
-.panelScrim[data-state="closed"] {
-	opacity: 0;
-	pointer-events: none;
-	transition-duration: 150ms;
-}
-
 /* The drawer's leading edge: a thin grab area over the hairline, drawn
    only while it has keyboard focus, as on the sidebar. */
 .resizer {
@@ -88,12 +67,6 @@
 .resizer:focus-visible {
 	outline: none;
 	box-shadow: inset 2px 0 0 var(--ctd-focus-ring);
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.panelScrim {
-		transition: none;
-	}
 }
 
 /* Phones: the details take the whole screen, as a sheet would. */

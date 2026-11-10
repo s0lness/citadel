@@ -54,6 +54,8 @@ interface ShortcutDefinition {
  * uses (Ctrl+O, Ctrl+N, Ctrl+1…, ⇧⌘R, Ctrl+E) stay the browser's.
  */
 export const SHORTCUTS: readonly ShortcutDefinition[] = [
+	{ command: "undo", chord: "mod+z", scope: SCOPE.everywhere },
+	{ command: "redo", chord: "mod+shift+z", scope: SCOPE.everywhere },
 	{ command: "find", chord: "mod+f", scope: SCOPE.everywhere },
 	{ command: "go-all-books", chord: "mod+1", scope: SCOPE.desktopOnly },
 	{ command: "go-authors", chord: "mod+2", scope: SCOPE.desktopOnly },
@@ -63,7 +65,7 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
 	{ command: "go-back", chord: "mod+[", scope: SCOPE.desktopOnly },
 	{ command: "go-forward", chord: "mod+]", scope: SCOPE.desktopOnly },
 	{ command: "book-show-details", chord: "mod+i", scope: SCOPE.everywhere },
-	{ command: "book-read", chord: "mod+o", scope: SCOPE.desktopOnly },
+	{ command: "book-open", chord: "mod+o", scope: SCOPE.desktopOnly },
 	{ command: "book-edit", chord: "mod+e", scope: SCOPE.desktopOnly },
 	{
 		command: "book-show-in-file-manager",
@@ -194,7 +196,7 @@ export const ariaChord = (chord: string, os: OperatingSystem): string => {
 
 const BOOK_SHORTCUT_COMMANDS: Partial<Record<TBookCommand, MenuCommand>> = {
 	[BOOK_COMMAND.showDetails]: "book-show-details",
-	[BOOK_COMMAND.read]: "book-read",
+	[BOOK_COMMAND.open]: "book-open",
 	[BOOK_COMMAND.edit]: "book-edit",
 	[BOOK_COMMAND.showInFileManager]: "book-show-in-file-manager",
 	[BOOK_COMMAND.delete]: "book-delete",

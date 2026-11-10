@@ -51,7 +51,7 @@ export type MenuCommand =
 	| "redo"
 	| "select-all"
 	| "book-show-details"
-	| "book-read"
+	| "book-open"
 	| "book-edit"
 	| "book-mark-finished"
 	| "book-show-in-file-manager"
@@ -87,8 +87,15 @@ export interface MenuState {
 	libraries: { id: string; name: string; active: boolean }[];
 	/** Shows Restart to Update in the app menu. */
 	updateReadyVersion: string | null;
-	/** Undo and Redo go to the book editor instead of the text field. */
-	editingBook: boolean;
+	/**
+	 * Undo and Redo act on the app's undo history (no text field has the
+	 * keyboard) instead of being the native text-editing items.
+	 */
+	appUndo: boolean;
+	/** "Undo Mark as Finished"; null disables Undo. */
+	undoLabel: string | null;
+	/** "Redo Mark as Finished"; null disables Redo. */
+	redoLabel: string | null;
 }
 
 export interface MenuAdapter {

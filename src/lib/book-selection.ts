@@ -261,22 +261,23 @@ export interface BookClickModifiers {
 	detail: number;
 }
 
-export type BookClickIntent = "select" | "toggle" | "extend" | "open";
+export type BookClickIntent = "show" | "toggle" | "extend" | "open" | "none";
 
 /**
- * What a click on a cover does. In the desktop app a click selects and a
- * double-click opens, like Finder; in the browser a click opens, like a
- * link. ⌘ (Ctrl off the Mac) toggles and ⇧ extends in both, since a link
- * has no use for them here.
+ * What a click on a cover does, the same on every platform: a click (or
+ * tap) selects the book and shows its details; ⌘-click (Ctrl-click off the
+ * Mac) toggles it in the selection and ⇧-click extends it, both without the
+ * details; the second click of a double-click opens the book's file. Later
+ * clicks of a triple-click do nothing, so the file opens once.
  */
 export const bookClickIntent = (
 	modifiers: BookClickModifiers,
-	{ clickSelects, isMac }: { clickSelects: boolean; isMac: boolean },
+	{ isMac }: { isMac: boolean },
 ): BookClickIntent => {
 	if (modifiers.shiftKey) return "extend";
 	if (isMac ? modifiers.metaKey : modifiers.ctrlKey) return "toggle";
-	if (!clickSelects) return "open";
-	return modifiers.detail >= 2 ? "open" : "select";
+	if (modifiers.detail === 2) return "open";
+	return modifiers.detail > 2 ? "none" : "show";
 };
 
 /** A move under this many pixels between press and release is still a click. */

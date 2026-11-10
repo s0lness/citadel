@@ -34,7 +34,7 @@ export const useWindowDragStrip = () => {
 			});
 	}, []);
 
-	// Radix closes drawers and menus on a press outside them; a press that
+	// Radix closes menus and popovers on a press outside them; a press that
 	// moves the window isn't one.
 	const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
 		event.stopPropagation();

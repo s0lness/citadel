@@ -8,7 +8,6 @@ import {
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import type { LibraryBook } from "@/bindings";
 import booksStyles from "@/components/pages/Books.module.css";
-import { Drawer } from "@/components/ui";
 import { fileTypeKey } from "@/lib/book-file-actions";
 import type { OperatingSystem } from "@/lib/platform/os";
 import { createWebPlatform } from "@/lib/platform/create";
@@ -16,7 +15,7 @@ import { PlatformProvider } from "@/lib/platform/context";
 import type { PlatformAdapter } from "@/lib/platform/types";
 import type { Library } from "@/lib/services/library";
 import { useLibraryStore } from "@/stores/library/store";
-import { BookDrawer } from "./BookDrawer";
+import { BookDetailsDrawer } from "./BookDrawer";
 
 const svgIcon = (body: string) =>
 	`data:image/svg+xml,${encodeURIComponent(
@@ -205,9 +204,13 @@ const Frame = ({ platform, bookValue, server, startDownload }: FrameProps) => {
 				routeTree: createRootRoute({
 					component: () => (
 						<Page>
-							<Drawer open onOpenChange={() => {}} width={500} bleed>
-								<BookDrawer book={bookValue} onClose={() => {}} />
-							</Drawer>
+							<BookDetailsDrawer
+								book={bookValue}
+								open
+								onClose={() => {}}
+								returnFocusRef={{ current: null }}
+								className={booksStyles.drawer}
+							/>
 						</Page>
 					),
 				}),

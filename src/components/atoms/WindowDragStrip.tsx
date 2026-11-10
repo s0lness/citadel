@@ -4,8 +4,8 @@ import styles from "./WindowDragStrip.module.css";
 
 /**
  * A toolbar-high strip across the top of the window, above every layer
- * (first run, recovery, the library-switch curtain, sheets, alerts and the
- * drawer), so the window can always be moved. Desktop only.
+ * (first run, recovery, the library-switch curtain, sheets and alerts), so
+ * the window can always be moved. Desktop only.
  */
 export const WindowDragStrip = () => {
 	const platform = usePlatform();

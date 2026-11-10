@@ -22,7 +22,7 @@ const RESTART_POSITION: usize = 2;
 
 struct BookItems<R: Runtime> {
     show_details: MenuItem<R>,
-    read: MenuItem<R>,
+    open: MenuItem<R>,
     edit: MenuItem<R>,
     mark_finished: MenuItem<R>,
     show_in_file_manager: MenuItem<R>,
@@ -37,8 +37,8 @@ pub struct MenuBar<R: Runtime> {
     edit_menu: Submenu<R>,
     native_undo: PredefinedMenuItem<R>,
     native_redo: PredefinedMenuItem<R>,
-    editor_undo: MenuItem<R>,
-    editor_redo: MenuItem<R>,
+    app_undo: MenuItem<R>,
+    app_redo: MenuItem<R>,
     switch_library: Submenu<R>,
     book: BookItems<R>,
     sidebar: MenuItem<R>,
@@ -138,13 +138,14 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<(Menu<R>, MenuBar<
         ],
     )?;
 
-    // Undo/Redo stay the native responder-chain items, so ⌘Z keeps working
-    // in every text field, until the book editor is open; then they swap for
-    // items that send `undo`/`redo` to the editor.
+    // Undo/Redo are the native responder-chain items while a text field has
+    // the keyboard, so ⌘Z keeps undoing typing there; otherwise they swap for
+    // items that send `undo`/`redo` to the app's undo history, named after
+    // its top entry and disabled when it is empty.
     let native_undo = PredefinedMenuItem::undo(app, None)?;
     let native_redo = PredefinedMenuItem::redo(app, None)?;
-    let editor_undo = command_item(app, MenuCommand::Undo, "Undo", Some("CmdOrCtrl+Z"))?;
-    let editor_redo = command_item(app, MenuCommand::Redo, "Redo", Some("CmdOrCtrl+Shift+Z"))?;
+    let app_undo = command_item(app, MenuCommand::Undo, "Undo", Some("CmdOrCtrl+Z"))?;
+    let app_redo = command_item(app, MenuCommand::Redo, "Redo", Some("CmdOrCtrl+Shift+Z"))?;
     let edit_menu = Submenu::with_items(
         app,
         "Edit",
@@ -169,7 +170,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<(Menu<R>, MenuBar<
             "Show Details",
             Some("CmdOrCtrl+I"),
         )?,
-        read: command_item(app, MenuCommand::BookRead, "Read", Some("CmdOrCtrl+O"))?,
+        open: command_item(app, MenuCommand::BookOpen, "Open", Some("CmdOrCtrl+O"))?,
         edit: command_item(app, MenuCommand::BookEdit, "Edit…", Some("CmdOrCtrl+E"))?,
         mark_finished: command_item(app, MenuCommand::BookMarkFinished, "Mark as Finished", None)?,
         show_in_file_manager: command_item(
@@ -192,7 +193,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<(Menu<R>, MenuBar<
         true,
         &[
             &book.show_details,
-            &book.read,
+            &book.open,
             &book.edit,
             &separator()?,
             &book.mark_finished,
@@ -326,8 +327,8 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<(Menu<R>, MenuBar<
             edit_menu,
             native_undo,
             native_redo,
-            editor_undo,
-            editor_redo,
+            app_undo,
+            app_redo,
             switch_library,
             book,
             sidebar,
@@ -345,7 +346,7 @@ impl<R: Runtime> MenuBar<R> {
         if changes.book {
             let (items, views) = (&self.book, &next.book);
             set_item(&items.show_details, &views.show_details)?;
-            set_item(&items.read, &views.read)?;
+            set_item(&items.open, &views.open)?;
             set_item(&items.edit, &views.edit)?;
             set_item(&items.mark_finished, &views.mark_finished)?;
             set_item(&items.show_in_file_manager, &views.show_in_file_manager)?;
@@ -371,18 +372,24 @@ impl<R: Runtime> MenuBar<R> {
             }
         }
 
-        let editor_undo_shown = previous.is_some_and(|view| view.editing_book);
-        if next.editing_book != editor_undo_shown {
-            if next.editing_book {
+        let app_undo_shown = previous.is_some_and(|view| view.undo.is_some());
+        if next.undo.is_some() != app_undo_shown {
+            if next.undo.is_some() {
                 self.edit_menu.remove(&self.native_undo)?;
                 self.edit_menu.remove(&self.native_redo)?;
-                self.edit_menu.insert(&self.editor_undo, 0)?;
-                self.edit_menu.insert(&self.editor_redo, 1)?;
+                self.edit_menu.insert(&self.app_undo, 0)?;
+                self.edit_menu.insert(&self.app_redo, 1)?;
             } else {
-                self.edit_menu.remove(&self.editor_undo)?;
-                self.edit_menu.remove(&self.editor_redo)?;
+                self.edit_menu.remove(&self.app_undo)?;
+                self.edit_menu.remove(&self.app_redo)?;
                 self.edit_menu.insert(&self.native_undo, 0)?;
                 self.edit_menu.insert(&self.native_redo, 1)?;
+            }
+        }
+        if changes.undo {
+            if let Some(undo) = &next.undo {
+                set_item(&self.app_undo, &undo.undo)?;
+                set_item(&self.app_redo, &undo.redo)?;
             }
         }
         Ok(())

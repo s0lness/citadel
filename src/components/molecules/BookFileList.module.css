@@ -116,6 +116,12 @@
 	-webkit-user-drag: none;
 }
 
+/* Window in the background: the app's colours step back with the chrome. */
+:global(:root[data-runtime="desktop"][data-window-inactive]) .appIcon {
+	filter: saturate(0.25);
+	opacity: 0.75;
+}
+
 /* Downloading stays grey; the stop square shows only where the pointer is. */
 .iconButton[data-download="downloading"]:hover {
 	color: var(--ctd-ink-soft);
