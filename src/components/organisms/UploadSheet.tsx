@@ -9,6 +9,7 @@ import {
 	DialogCloseButton,
 	HoldButton,
 	IconButton,
+	Tooltip,
 } from "@/components/ui";
 import { useFollowNewest } from "@/lib/hooks/use-follow-newest";
 import type { ReviewDeck } from "@/lib/hooks/use-review-deck";
@@ -101,13 +102,15 @@ export const UploadSheet = ({
 							</span>
 						)}
 						{!reviewing && items.length > 0 && (
-							<IconButton
-								className={styles.addMore}
-								aria-label="Choose more books"
-								onClick={onChooseFiles}
-							>
-								<PlusGlyph />
-							</IconButton>
+							<Tooltip label="Choose More Books…">
+								<IconButton
+									className={styles.addMore}
+									aria-label="Choose more books"
+									onClick={onChooseFiles}
+								>
+									<PlusGlyph />
+								</IconButton>
+							</Tooltip>
 						)}
 						<Dialog.Close asChild>
 							<DialogCloseButton className={styles.close} />

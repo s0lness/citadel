@@ -19,6 +19,7 @@ import {
 	IconButton,
 	Sheet,
 	TextInput,
+	Tooltip,
 } from "@/components/ui";
 import { useAuthorFilters } from "@/lib/hooks/use-author-filters";
 import { useAuthorRowMenu } from "@/lib/hooks/use-author-row-menu";
@@ -208,7 +209,7 @@ export const Authors = () => {
 							variant="default"
 							onClick={() => setShowOnlyAuthorsWithoutBooks(false)}
 						>
-							Show all authors
+							Show All Authors
 						</Button>
 					</EmptyState>
 				)
@@ -482,21 +483,25 @@ const AuthorRow = ({
 			<div className={styles.actions}>
 				{canEdit && (
 					<>
-						<IconButton
-							className={styles.actionIcon}
-							aria-label={`Edit ${author.name}`}
-							onClick={() => onEditAuthor(author.id)}
-						>
-							<EditGlyph />
-						</IconButton>
-						{author.book_count === 0 ? (
+						<Tooltip label="Edit Author…">
 							<IconButton
-								className={clsx(styles.actionIcon, styles.dangerIcon)}
-								aria-label={`Delete ${author.name}`}
-								onClick={() => onDeleteAuthor(author.id)}
+								className={styles.actionIcon}
+								aria-label={`Edit ${author.name}`}
+								onClick={() => onEditAuthor(author.id)}
 							>
-								<TrashGlyph />
+								<EditGlyph />
 							</IconButton>
+						</Tooltip>
+						{author.book_count === 0 ? (
+							<Tooltip label="Delete Author…">
+								<IconButton
+									className={clsx(styles.actionIcon, styles.dangerIcon)}
+									aria-label={`Delete ${author.name}`}
+									onClick={() => onDeleteAuthor(author.id)}
+								>
+									<TrashGlyph />
+								</IconButton>
+							</Tooltip>
 						) : (
 							<span className={styles.actionSpacer} />
 						)}

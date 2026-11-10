@@ -29,6 +29,7 @@ import {
 	TextInput,
 	Tooltip,
 } from "@/components/ui";
+import { useBookEditorCommands } from "@/lib/hooks/use-book-editor-commands";
 import { useDeleteBookConfirmation } from "@/lib/hooks/use-delete-book-confirmation";
 import { identifierDisplayName } from "@/lib/book-identifiers";
 import { deleteBookCopy, deleteBookDialogTitle } from "@/lib/delete-book-title";
@@ -115,7 +116,7 @@ const SubjectSuggestions = ({
 			))}
 			{subjects.length > 1 && (
 				<Button variant="subtle" onClick={onAddAll}>
-					Add all {subjects.length}
+					Add All {subjects.length}
 				</Button>
 			)}
 		</div>
@@ -738,6 +739,12 @@ const EditBookForm = ({
 		setValues(previous);
 		requestSave();
 	};
+
+	useBookEditorCommands({
+		canUndo: hasChanges || history.length > 0,
+		undo,
+		save: requestSave,
+	});
 
 	const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();

@@ -307,7 +307,7 @@ export const SidebarView = ({
 	const footerBar = session !== null || showSettingsButton;
 	return (
 		<div className={styles.root}>
-			<div className={styles.sections}>
+			<div className={clsx(styles.sections, "ctd-scroller")}>
 				<div className={styles.section}>
 					{libraryHeader}
 					<Link

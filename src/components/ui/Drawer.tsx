@@ -1,4 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import clsx from "clsx";
 import type { ReactNode } from "react";
 import { DialogCloseButton } from "./DialogCloseButton";
 import styles from "./Drawer.module.css";
@@ -45,6 +46,7 @@ export const Drawer = ({
 			{/* No Dialog.Description; aria-describedby={undefined} silences the Radix warning. */}
 			<Dialog.Content
 				className={styles.content}
+				data-drawer=""
 				data-bleed={bleed || undefined}
 				style={{ width: `min(${width}px, calc(100vw - 32px))` }}
 				aria-describedby={undefined}
@@ -65,7 +67,7 @@ export const Drawer = ({
 						<DialogCloseButton />
 					</Dialog.Close>
 				</div>
-				<div className={styles.body}>{children}</div>
+				<div className={clsx(styles.body, "ctd-scroller")}>{children}</div>
 			</Dialog.Content>
 		</Dialog.Portal>
 	</Dialog.Root>

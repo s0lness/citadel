@@ -4,7 +4,22 @@ import {
 	allowsDragStart,
 	allowsNativeSelectAll,
 	type GuardTarget,
+	selectableFromStyles,
 } from "./chrome-guards";
+
+describe("selectableFromStyles", () => {
+	it("lets the nearest decisive user-select win", () => {
+		expect(selectableFromStyles(["auto", "text", "none"])).toBe(true);
+		expect(selectableFromStyles(["auto", "none", "text"])).toBe(false);
+		expect(selectableFromStyles(["all"])).toBe(true);
+		expect(selectableFromStyles(["auto", "auto"])).toBe(false);
+	});
+
+	it("opens the browser menu over CSS-selectable text with a selection", () => {
+		expect(allowsBrowserContextMenu(inside(), "Dune", true)).toBe(true);
+		expect(allowsBrowserContextMenu(inside(), "", true)).toBe(false);
+	});
+});
 
 /** A target inside elements matching these selector fragments. */
 const inside = (...fragments: string[]): GuardTarget => ({

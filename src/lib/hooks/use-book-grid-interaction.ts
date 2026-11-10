@@ -8,7 +8,8 @@ import {
 	primaryLocalPath,
 	primaryRemoteFile,
 } from "@/lib/book-files";
-import { bookMenuEntries, type TBookCommand } from "@/lib/book-menu";
+import { bookShortcutHint } from "@/lib/app-shortcuts";
+import { bookMenuEntries } from "@/lib/book-menu";
 import {
 	bookClickIntent,
 	clearSelection,
@@ -20,6 +21,7 @@ import {
 } from "@/lib/book-selection";
 import type { ContextMenuEntry } from "@/lib/context-menu";
 import { contextMenuPoint, fromKeyboard } from "@/lib/context-menu-point";
+import { dragOutGuard } from "@/lib/drag-out-guard";
 import {
 	bookMenuContext,
 	openBookDetails,
@@ -99,15 +101,20 @@ export const useBookGridInteraction = (
 					canEdit: library.library?.readOnly === false,
 					platform,
 				});
+				const env = {
+					os: platform.os,
+					desktop: platform.capabilities.supportsNativeWindows,
+				};
 				const items: ContextMenuEntry[] = bookMenuEntries(context).map(
-					(entry) =>
-						entry.type === "separator"
-							? entry
-							: {
-									...entry,
-									onSelect: () =>
-										selectionActions.run(entry.id as TBookCommand),
-								},
+					(entry) => {
+						if (entry.type === "separator") return entry;
+						const hint = bookShortcutHint(entry.id, env);
+						return {
+							...entry,
+							...(hint && { shortcut: hint.label, keyShortcuts: hint.aria }),
+							onSelect: () => selectionActions.run(entry.id),
+						};
+					},
 				);
 				menu.openAt(
 					event,
@@ -143,6 +150,12 @@ export const useBookGridInteraction = (
 					event.preventDefault();
 					return;
 				}
+				dragOutGuard.begin();
+				event.currentTarget.addEventListener(
+					"dragend",
+					() => dragOutGuard.end(),
+					{ once: true },
+				);
 				event.dataTransfer.effectAllowed = "copy";
 				event.dataTransfer.setData("DownloadURL", downloadUrlDragData(remote));
 				event.dataTransfer.setData("text/uri-list", remote.url);

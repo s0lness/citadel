@@ -299,13 +299,14 @@ pub struct MenuView {
     pub editing_book: bool,
 }
 
-pub const RESTART_TO_UPDATE_LABEL: &str = "Restart to Update";
+pub const RESTART_TO_UPDATE_LABEL: &str = "Restart to Update…";
 
 fn books(count: u32) -> String {
     format!("{count} Books")
 }
 
-/// Labels for the Book menu. Read, Mark and Delete act on the whole
+/// Labels for the Book menu, matching the book's right-click menu
+/// (`src/lib/book-menu.ts`). Read, Mark, Copy and Delete act on the whole
 /// selection; the rest need exactly one book.
 pub fn book_menu_view(selected: u32, all_finished: bool, file_manager_name: &str) -> BookMenuView {
     let single = selected == 1;
@@ -327,16 +328,16 @@ pub fn book_menu_view(selected: u32, all_finished: bool, file_manager_name: &str
             any,
         ),
         edit: ItemView::new("Edit…", single),
-        mark_finished: ItemView::new(
+        mark_finished: ItemView::new(format!("Mark as {finished}"), any),
+        show_in_file_manager: ItemView::new(format!("Show in {file_manager_name}"), single),
+        copy_title: ItemView::new(
             if plural {
-                format!("Mark {} as {finished}", books(selected))
+                format!("Copy {selected} Titles")
             } else {
-                format!("Mark as {finished}")
+                "Copy Title".to_string()
             },
             any,
         ),
-        show_in_file_manager: ItemView::new(format!("Show in {file_manager_name}"), single),
-        copy_title: ItemView::new("Copy Title", single),
         delete: ItemView::new(
             if plural {
                 format!("Delete {}…", books(selected))
@@ -530,13 +531,18 @@ mod tests {
         assert_eq!(view.read, ItemView::new("Read 2 Books", true));
         assert_eq!(
             view.mark_finished,
-            ItemView::new("Mark 2 Books as Unfinished", true)
+            ItemView::new("Mark as Unfinished", true)
         );
+        assert_eq!(view.copy_title, ItemView::new("Copy 2 Titles", true));
         assert_eq!(view.delete, ItemView::new("Delete 2 Books…", true));
         assert!(!view.show_details.enabled);
         assert!(!view.edit.enabled);
         assert!(!view.show_in_file_manager.enabled);
-        assert!(!view.copy_title.enabled);
+    }
+
+    #[test]
+    fn restart_to_update_opens_with_an_ellipsis_as_the_issue_names_it() {
+        assert_eq!(RESTART_TO_UPDATE_LABEL, "Restart to Update…");
     }
 
     #[test]

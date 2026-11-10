@@ -12,6 +12,7 @@ import {
 	BookUploads,
 	UploadToolbarStatus,
 } from "@/components/organisms/BookUploads";
+import { MenuCommandHost } from "@/components/organisms/MenuCommandHost";
 import { Sidebar } from "@/components/organisms/Sidebar";
 import { IconButton, Tooltip } from "@/components/ui";
 import { useAppKeymap } from "@/lib/hooks/use-app-keymap";
@@ -120,13 +121,14 @@ const Root = () => {
 					)}
 
 					<main className={classes.main}>
-						<div className={classes.content}>
+						<div className={clsx(classes.content, "ctd-scroller")}>
 							<Outlet />
 						</div>
 					</main>
 				</div>
 			</div>
 			<BookUploads />
+			<MenuCommandHost />
 			{serverUpdated.build && (
 				<ServerUpdatedBanner
 					onReload={serverUpdated.reload}

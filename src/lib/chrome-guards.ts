@@ -25,15 +25,32 @@ const isTextField = (target: GuardTarget | null): boolean =>
 	target?.closest(TEXT_FIELD_SELECTOR) != null;
 
 /**
+ * Whether CSS made text selectable, from the element's `user-select` up
+ * through its ancestors: the nearest one that says text (or all) or none
+ * decides, as `auto` defers to the parent.
+ */
+export const selectableFromStyles = (
+	userSelects: Iterable<string>,
+): boolean => {
+	for (const value of userSelects) {
+		if (value === "text" || value === "all") return true;
+		if (value === "none") return false;
+	}
+	return false;
+};
+
+/**
  * The browser's menu stays for text: in a field, or over selectable content
- * while something is selected (Copy, Look Up, spelling).
+ * while something is selected (Copy, Look Up, spelling). Content is
+ * selectable when marked so, or when its CSS says `user-select: text`.
  */
 export const allowsBrowserContextMenu = (
 	target: GuardTarget | null,
 	selectedText: string,
+	styledSelectable = false,
 ): boolean =>
 	isTextField(target) ||
-	(target?.closest(SELECTABLE_SELECTOR) != null &&
+	((styledSelectable || target?.closest(SELECTABLE_SELECTOR) != null) &&
 		selectedText.trim().length > 0);
 
 /** Select All belongs to fields; elsewhere the app decides (e.g. all books). */
@@ -57,13 +74,34 @@ const asTarget = (target: EventTarget | null): GuardTarget | null => {
 	return null;
 };
 
+function* userSelectChain(element: Element | null): Generator<string> {
+	for (let node = element; node !== null; node = node.parentElement) {
+		const style = getComputedStyle(node);
+		yield style.userSelect || style.webkitUserSelect;
+	}
+}
+
+/** The outermost element of a run of CSS-selectable text, if any. */
+const styledSelectableBlock = (element: Element | null): Element | null => {
+	let block: Element | null = null;
+	for (let node = element; node !== null; node = node.parentElement) {
+		const style = getComputedStyle(node);
+		const value = style.userSelect || style.webkitUserSelect;
+		if (value === "none") break;
+		if (value === "text" || value === "all") block = node;
+	}
+	return block;
+};
+
 /**
  * Inside a block of selectable content, Select All selects that block, as in
  * a read-only NSTextView; anywhere else it does nothing native.
  */
 const selectAllWithinContent = (doc: Document) => {
 	const anchor = asTarget(doc.getSelection()?.anchorNode ?? null);
-	const content = anchor?.closest(SELECTABLE_SELECTOR);
+	const content =
+		anchor?.closest(SELECTABLE_SELECTOR) ??
+		styledSelectableBlock(anchor instanceof Element ? anchor : null);
 	if (!(content instanceof Element)) return;
 	const range = doc.createRange();
 	range.selectNodeContents(content);
@@ -85,7 +123,12 @@ export const installChromeGuards = (
 		if (event.defaultPrevented) return;
 		if (allowInspect && event.altKey) return;
 		const selectedText = doc.getSelection()?.toString() ?? "";
-		if (allowsBrowserContextMenu(asTarget(event.target), selectedText)) return;
+		const target = asTarget(event.target);
+		const styled =
+			target instanceof Element &&
+			selectedText.trim().length > 0 &&
+			selectableFromStyles(userSelectChain(target));
+		if (allowsBrowserContextMenu(target, selectedText, styled)) return;
 		event.preventDefault();
 	};
 	const onKeyDown = (event: KeyboardEvent) => {

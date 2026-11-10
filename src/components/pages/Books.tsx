@@ -62,6 +62,11 @@ import {
 	type LibraryBookSortOrderKey,
 	useLibraryView,
 } from "@/stores/library-view/store";
+import {
+	setShelfSheetOpen,
+	takeFindRequest,
+	useMenuRequests,
+} from "@/stores/menu-requests/store";
 import { createSmartShelf } from "@/stores/settings/actions";
 import { useSettings } from "@/stores/settings/store";
 import { F7Bookmark } from "../icons/F7Bookmark";
@@ -293,6 +298,15 @@ export const Books = ({
 		}, []),
 	);
 
+	// Edit > Find (⌘F): focus the search, once the page shows.
+	const findPending = useMenuRequests((s) => s.findPending);
+	useEffect(() => {
+		if (!findPending || !takeFindRequest()) return;
+		closeBookDetails();
+		searchInputRef.current?.focus();
+		searchInputRef.current?.select();
+	}, [findPending]);
+
 	useLibraryKeymap({
 		books,
 		drawerOpened: isBookSidebarOpen,
@@ -422,6 +436,7 @@ export const Books = ({
 				style={{ outline: "none" }}
 				className={clsx(
 					styles.gridArea,
+					"ctd-scroller",
 					isSearching && styles.gridAreaSearching,
 				)}
 				onClick={onBackgroundClick}
@@ -463,7 +478,7 @@ export const Books = ({
 									onClearDeepLinkFilter();
 								}}
 							>
-								Show all books
+								Show All Books
 							</Button>
 						</EmptyState>
 					)
@@ -580,12 +595,16 @@ const SaveAsShelfControl = ({
 	const libraryId = useLibrarySelection().activeLibrary?.id;
 	const bookmarkButtonRef = useRef<HTMLButtonElement>(null);
 
-	const [isOpen, setIsOpen] = useState(false);
+	// Library > New Shelf… opens the same sheet from the menu bar.
+	const isOpen = useMenuRequests((s) => s.shelfSheetOpen);
 	const [name, setName] = useState("");
 	const [error, setError] = useState<string | null>(null);
 
+	// The sheet is the page's: leaving the page closes it.
+	useEffect(() => () => setShelfSheetOpen(false), []);
+
 	const close = () => {
-		setIsOpen(false);
+		setShelfSheetOpen(false);
 		setName("");
 		setError(null);
 	};
@@ -624,7 +643,7 @@ const SaveAsShelfControl = ({
 					ref={bookmarkButtonRef}
 					variant="subtle"
 					className={styles.shelfButton}
-					onClick={() => setIsOpen(true)}
+					onClick={() => setShelfSheetOpen(true)}
 				>
 					<F7Bookmark aria-hidden="true" style={{ fontSize: 14 }} />
 					Save as Shelf…
@@ -648,7 +667,6 @@ const SaveAsShelfControl = ({
 					<TextInput
 						placeholder="Shelf name"
 						aria-label="Shelf name"
-						// biome-ignore lint/a11y/noAutofocus: the sheet exists to name the shelf; focus must land in the field.
 						autoFocus
 						value={name}
 						error={error}

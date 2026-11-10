@@ -94,7 +94,7 @@ export const ContextMenu = ({
 						role={entry.checked === undefined ? "menuitem" : "menuitemcheckbox"}
 						aria-checked={entry.checked}
 						aria-disabled={entry.disabled || undefined}
-						aria-keyshortcuts={entry.shortcut}
+						aria-keyshortcuts={entry.keyShortcuts}
 						className={styles.item}
 						data-highlighted={index === highlighted || undefined}
 						data-destructive={entry.destructive || undefined}

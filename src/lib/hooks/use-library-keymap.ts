@@ -122,14 +122,6 @@ export const useLibraryKeymap = ({
 	if (!drawerOpened) {
 		bindings.push(
 			{
-				chord: "mod+f",
-				allowInEditable: true,
-				onMatch: () => {
-					searchInputRef.current?.focus();
-					searchInputRef.current?.select();
-				},
-			},
-			{
 				chord: "escape",
 				allowInEditable: true,
 				when: () => document.activeElement === searchInputRef.current,

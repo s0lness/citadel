@@ -2,6 +2,7 @@ import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { commands } from "@/bindings";
+import { dragOutGuard } from "@/lib/drag-out-guard";
 import { localFile } from "../local-file";
 import type { WindowAdapter } from "../types";
 import { distinct } from "./distinct";
@@ -48,7 +49,15 @@ export const createTauriWindow = (): WindowAdapter => ({
 		const [first] = files;
 		if (first === undefined) return;
 		const icon = iconPath ?? (await dragIconFor(first));
-		await startDrag({ item: files, icon, mode: "copy" });
+		dragOutGuard.begin();
+		try {
+			await startDrag({ item: files, icon, mode: "copy" }, () =>
+				dragOutGuard.end(),
+			);
+		} catch (error) {
+			dragOutGuard.end();
+			throw error;
+		}
 	},
 	onActiveChange: async (handler) => {
 		const window = getCurrentWindow();

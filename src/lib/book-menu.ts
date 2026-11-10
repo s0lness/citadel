@@ -59,7 +59,7 @@ export const readLabel = (count: number): string =>
 	count === 1 ? "Read" : `Read ${booksTitle(count)}`;
 
 export const deleteLabel = (count: number): string =>
-	`Delete ${booksTitle(count)}…`;
+	count === 1 ? "Delete…" : `Delete ${booksTitle(count)}…`;
 
 export const copyTitleLabel = (count: number): string =>
 	count === 1 ? "Copy Title" : `Copy ${formatCount(count)} Titles`;

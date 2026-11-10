@@ -41,7 +41,7 @@ describe("bookMenuEntries", () => {
 			"Show in Finder",
 			"Copy Title",
 			"---",
-			"Delete Book…",
+			"Delete…",
 		]);
 	});
 

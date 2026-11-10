@@ -14,6 +14,8 @@ export interface ContextMenuItemEntry {
 	checked?: boolean;
 	/** A key equivalent shown at the right, e.g. "⌘I". Display only. */
 	shortcut?: string;
+	/** The same, spelled for `aria-keyshortcuts` ("Meta+I"). */
+	keyShortcuts?: string;
 }
 
 export interface ContextMenuSeparatorEntry {
