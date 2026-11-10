@@ -1,9 +1,10 @@
 /* Subtler scrim than Sheet: the drawer reveals detail, it does not block
    work. A page with a status bar sets --ctd-drawer-bottom-inset to its
-   height, and the scrim and drawer stop above it so it stays in view. */
+   height: the drawer stops above it, and the status bar rises above the
+   scrim (Books.module.css), so the book count stays in view, undimmed. */
 .overlay {
 	position: fixed;
-	inset: 0 0 var(--ctd-drawer-bottom-inset, 0);
+	inset: 0;
 	background-color: oklch(0% 0 0 / 0.1);
 	z-index: 110;
 }

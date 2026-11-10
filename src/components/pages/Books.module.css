@@ -94,6 +94,7 @@
 }
 
 .footer {
+	position: relative;
 	flex-shrink: 0;
 	display: flex;
 	align-items: center;
@@ -103,6 +104,12 @@
 	padding: 0;
 	background-color: var(--ctd-content-bg);
 	border-top: 1px solid var(--ctd-border);
+}
+
+/* While the drawer is open the count rises above its scrim (110),
+   undimmed; sheets and alerts (112 and up) still cover it. */
+:global(:root):has([data-drawer][data-state="open"]) .footer {
+	z-index: 111;
 }
 
 .footerText {

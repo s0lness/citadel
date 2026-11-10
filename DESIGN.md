@@ -115,6 +115,59 @@ Follow `docs/adr/0014-in-place-feedback.md` for when to ask at all.
 - Cursors follow AppKit: the arrow everywhere, buttons and links included;
   the I-beam in text.
 
+## Selection and books
+
+- **Desktop app:** click selects; double-click or Return opens the details
+  drawer; ⌘-click (Ctrl-click off macOS) toggles and ⇧-click extends; ⌘A
+  selects all, fetching pages it hasn't loaded when an action runs. Space is
+  Quick Look on macOS. Dragging covers out copies their files
+  (`platform.window.startDrag`); drops that arrive while that drag is in
+  flight are ignored (`src/lib/drag-out-guard.ts`), so dropping books back
+  doesn't import copies.
+- **Web:** a single click opens, like a link; modifier-clicks still select.
+  Dragging a cover downloads its file where the browser reads `DownloadURL`
+  (Chromium).
+- Bulk actions are Mark as Finished and Delete; one confirmation for delete
+  (ADR 0014). The status bar says "2 of 14 selected".
+- **Details drawer:** the overlay drawer stops above the status bar, which
+  stays undimmed above the scrim. Grouped rounded sections ("Files",
+  "Details"), label left, value right. File rows show the file-type icon, the
+  format in bold and the filename shortened in the middle. macOS desktop: a
+  folder (Show in Finder) and the default app's own icon (Open in …).
+  Windows/Linux: our folder/open icons. Web on a desktop: a download icon,
+  grey until done, with progress in its ring. Mobile: tap the row; it ends in
+  a download glyph and the size.
+
+## Menu bar and shortcuts
+
+- macOS desktop has the full menu bar (Citadel · Library · Edit · Book · View
+  · Go · Window · Help, `src-tauri/src/menu/`). The library window pushes what
+  it shows (selection count, sidebar, sort, libraries, editor Undo) and takes
+  its commands through `useMenuCommands`. The menu is the one place each of
+  its chords is handled there: the page binds none of them.
+- Every chord lives in one table, `src/lib/app-shortcuts.ts`. Windows and
+  Linux desktop bind the same chords in the page (Delete for Delete…). A
+  browser keeps its own chords (Ctrl/⌘+1…5, O, E, N, ⇧R, ","); there only
+  Find, Show Details and Delete are bound. Menus show a chord only where it
+  works, as "⌘I" on macOS and "Ctrl+I" elsewhere.
+- The book editor saves with ⌘S/Ctrl+S everywhere. Outside text fields, Undo
+  steps back its saves (Edit > Undo on macOS, ⌘Z/Ctrl+Z elsewhere); text
+  fields keep their own typing undo.
+- While a field or a sheet has the keyboard, the Book menu stands down, so
+  ⌘⌫ deletes text, not books.
+
+## Software update notice
+
+- Desktop: once an update has downloaded, the sidebar footer (where the gear
+  was) shows a quiet row, "Citadel 1.4 is ready" / "Restart to Update"; a
+  click restarts at once, right-click offers "Hide Until Next Update". On
+  macOS Citadel > Restart to Update… appears too. No badge, notification or
+  automatic restart; an ignored update installs at quit.
+- Web: one banner when the server's version changes under an open page,
+  "Citadel was updated. Reload to get the latest version."
+- The Settings gear is hidden on macOS desktop (⌘, and the app menu open
+  Settings); it stays on the web and on Windows/Linux.
+
 ## Scrollbars
 
 Overlay scrollbars that show only while scrolling and never shift content.
@@ -127,8 +180,13 @@ scroller is hovered or scrolling (`data-scrolling`, from
 
 ## Materials (Liquid Glass)
 
-- On macOS the webview is transparent over an `NSVisualEffectView` applied in
-  `src-tauri/src/main.rs`. The toolbar + sidebar L-region is real glass.
+- On macOS the webview is transparent over an `NSVisualEffectView` with the
+  platform **sidebar material** (`NSVisualEffectMaterial.sidebar`, Tauri's
+  `Effect::Sidebar`), the one Apple's own apps use, applied in
+  `src-tauri/src/window.rs` (`apply_glass`). It follows the window's active
+  state, so the glass goes flat when the window isn't in front; the
+  interface greys with it (`data-window-inactive`,
+  `useWindowChromeState`). The toolbar + sidebar L-region is real glass.
 - `:root[data-vibrancy]` (macOS desktop only) swaps `--ctd-nav-bg`/
   `--ctd-header-bg` to transparent and the page background to transparent.
   Elsewhere the opaque fallbacks apply; never assume transparency exists.
