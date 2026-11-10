@@ -178,7 +178,9 @@ export interface WindowAdapter {
 	 */
 	onActiveChange(handler: (active: boolean) => void): Promise<() => void>;
 	/** Full screen entered or left; called at once with the current value. */
-	onFullscreenChange(handler: (fullscreen: boolean) => void): Promise<() => void>;
+	onFullscreenChange(
+		handler: (fullscreen: boolean) => void,
+	): Promise<() => void>;
 }
 
 /**
