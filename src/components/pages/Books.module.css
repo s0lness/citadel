@@ -35,7 +35,7 @@
 	width: 100%;
 }
 
-/* Keeps "Unread only" on one line; the search field gives up the room. */
+/* Keeps "Unread Only" on one line; the search field gives up the room. */
 .unreadToggle {
 	display: flex;
 	align-items: center;
@@ -43,10 +43,12 @@
 	white-space: nowrap;
 }
 
-/* The glyph sits inside a 26px hit area; pull it in so the visible gap
-   matches the bar's 12px rhythm. */
+/* A quiet labelled button: the bookmark alone didn't say what it saved.
+ * Its own padding stands in for part of the bar's 12px gap. */
 .shelfButton {
-	margin-inline-start: -5px;
+	flex: none;
+	white-space: nowrap;
+	margin-inline-start: -6px;
 }
 
 .gridArea {
@@ -85,12 +87,20 @@
 	gap: 8px;
 }
 
+/* The status bar's height is also the book drawer's bottom inset, so the
+   drawer and its scrim stop above the book count instead of covering it. */
+:global(:root):has(.footer) {
+	--ctd-drawer-bottom-inset: 28px;
+}
+
 .footer {
 	flex-shrink: 0;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	padding: 6px 0;
+	box-sizing: border-box;
+	height: var(--ctd-drawer-bottom-inset);
+	padding: 0;
 	background-color: var(--ctd-content-bg);
 	border-top: 1px solid var(--ctd-border);
 }

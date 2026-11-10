@@ -126,7 +126,7 @@ const AddressView = ({
 							<GlobeGlyph />
 							<span className={styles.urlListText}>{url}</span>
 							{url === urls.current && (
-								<span className={styles.currentPill}>current</span>
+								<span className={styles.currentPill}>Current</span>
 							)}
 						</li>
 					))}
@@ -287,7 +287,7 @@ const BrowserPanel = ({
 								<FolderGlyph />
 								<span className={styles.entryName}>{entry.name}</span>
 								{entry.isLibrary && (
-									<span className={styles.entryTag}>library</span>
+									<span className={styles.entryTag}>Library</span>
 								)}
 							</button>
 						</li>

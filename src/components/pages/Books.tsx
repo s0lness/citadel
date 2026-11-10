@@ -3,25 +3,43 @@ import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LibraryBook } from "@/bindings";
 import {
+	AlertDialog,
 	Button,
 	Checkbox,
+	ContextMenu,
 	Drawer,
-	IconButton,
 	SearchField,
 	Select,
 	Sheet,
 	TextInput,
 	Tooltip,
 } from "@/components/ui";
+import { safeAsyncEventHandler } from "@/lib/async";
+import { bookCountStatus } from "@/lib/book-count";
+import { primaryLocalPath } from "@/lib/book-files";
 import {
 	BOOK_PAGE_SIZE,
 	type BookGridFilter,
 	sparseBookItems,
 } from "@/lib/book-page-cache";
+import {
+	deleteBooksCopy,
+	deleteBooksDialogTitle,
+} from "@/lib/delete-book-title";
+import { useBookGridInteraction } from "@/lib/hooks/use-book-grid-interaction";
+import {
+	closeBookDetails,
+	openBookDetails,
+	useBookSelection,
+	useBookSelectionStore,
+	useBookSelectionSync,
+	useDeleteBooksDialog,
+} from "@/lib/hooks/use-book-selection";
 import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import { useLibraryKeymap } from "@/lib/hooks/use-library-keymap";
 import { useLibrarySelection } from "@/lib/hooks/use-library-selection";
 import { useOnLibraryFlip } from "@/lib/hooks/use-on-library-flip";
+import { usePlatform } from "@/lib/platform/context";
 import {
 	type BookRouteFilters,
 	deepLinkClearsQuery,
@@ -47,6 +65,7 @@ import {
 import { createSmartShelf } from "@/stores/settings/actions";
 import { useSettings } from "@/stores/settings/store";
 import { F7Bookmark } from "../icons/F7Bookmark";
+import { bookCardDomId } from "../atoms/BookCard";
 import { BookGrid, type ScrollToBookIndex } from "../molecules/BookGrid";
 import { EmptyLibrary, EmptyState } from "../molecules/EmptyState";
 import { BookDrawer } from "../organisms/BookDrawer";
@@ -225,21 +244,23 @@ export const Books = ({
 		}
 	}, [libraryReady, tag_id, publisher_id, tags, publishers, actions]);
 
-	const [isBookSidebarOpen, setIsBookSidebarOpen] = useState(false);
+	const platform = usePlatform();
+	const isBookSidebarOpen = useBookSelectionStore((s) => s.detailsOpen);
+	const detailsBook = useBookSelectionStore((s) => s.detailsBook);
+	// The drawer follows the book's latest copy (marked finished from the
+	// grid, say) while it is in the loaded pages.
+	const selectedSidebarBook: LibraryBook | null =
+		detailsBook === null
+			? null
+			: (books.find((candidate) => candidate?.id === detailsBook.id) ??
+				detailsBook);
 
-	const [selectedSidebarBook, setSelectedSidebarBook] =
-		useState<LibraryBook | null>(null);
-	const onBookOpen = useCallback(
-		(bookId: LibraryBook["id"]) => {
-			const book = books.find(
-				(candidate) => candidate !== undefined && candidate.id === bookId,
-			);
-			if (!book) return;
-			setSelectedSidebarBook(book);
-			setIsBookSidebarOpen(true);
-		},
-		[books],
-	);
+	useBookSelectionSync({ books, resetKey: cache.key });
+	const { selection, selectedCount, isSelected } = useBookSelection();
+	const { cardActions, menu, onBackgroundClick, onGridContextMenu } =
+		useBookGridInteraction(books);
+	const cursorBook =
+		selection.cursor >= 0 ? books[selection.cursor] : undefined;
 
 	const searchInputRef = useRef<HTMLInputElement>(null);
 	const gridContainerRef = useRef<HTMLDivElement>(null);
@@ -272,14 +293,20 @@ export const Books = ({
 		}, []),
 	);
 
-	const { selectedBookId } = useLibraryKeymap({
+	useLibraryKeymap({
 		books,
-		resetToken: cache.key,
 		drawerOpened: isBookSidebarOpen,
 		searchInputRef,
 		gridContainerRef,
 		scrollToBookIndexRef,
-		onBookOpen,
+		onBookOpen: openBookDetails,
+		onQuickLook: platform.capabilities.canQuickLook
+			? (book) => {
+					const path = primaryLocalPath(book);
+					if (path !== null)
+						safeAsyncEventHandler(() => platform.fileOpener.quickLook(path))();
+				}
+			: undefined,
 		onClearSearch: () => setQuery(""),
 	});
 
@@ -291,6 +318,7 @@ export const Books = ({
 	// results — never transiently while a new search is still in flight.
 	const noMatches =
 		!loading && queryResolved && total === 0 && (libraryTotal ?? 0) > 0;
+	const showGrid = !emptyLibrary && !noMatches;
 	const trimmedQuery = query.trim();
 
 	const searchTokens = [
@@ -366,7 +394,7 @@ export const Books = ({
 				/>
 				<span className={styles.unreadToggle}>
 					<Checkbox
-						label="Unread only"
+						label="Unread Only"
 						checked={hideRead}
 						onCheckedChange={setHideRead}
 					/>
@@ -378,14 +406,32 @@ export const Books = ({
 					routeFilters={{ author_id, series_id, tag_id, publisher_id }}
 				/>
 			</div>
+			{/*
+			 * The scroll region is the listbox VoiceOver reads: it keeps focus
+			 * while arrows move the cursor (aria-activedescendant), since the
+			 * virtualized cards come and go.
+			 */}
 			<div
 				ref={gridContainerRef}
-				tabIndex={-1}
+				tabIndex={0}
 				style={{ outline: "none" }}
 				className={clsx(
 					styles.gridArea,
 					isSearching && styles.gridAreaSearching,
 				)}
+				onClick={onBackgroundClick}
+				onContextMenu={onGridContextMenu}
+				{...(showGrid
+					? {
+							role: "listbox",
+							"aria-label": "Books",
+							"aria-multiselectable": true,
+							"aria-activedescendant":
+								cursorBook !== undefined
+									? bookCardDomId(cursorBook.id)
+									: undefined,
+						}
+					: {})}
 			>
 				{emptyLibrary ? (
 					<EmptyLibrary />
@@ -420,8 +466,8 @@ export const Books = ({
 					<BookGrid
 						bookList={books}
 						loading={loading}
-						onBookOpen={onBookOpen}
-						selectedBookId={selectedBookId}
+						cardActions={cardActions}
+						isSelected={isSelected}
 						scrollElementRef={gridContainerRef}
 						scrollToBookIndexRef={scrollToBookIndexRef}
 						onVisibleRangeChange={onVisibleRangeChange}
@@ -429,18 +475,19 @@ export const Books = ({
 				)}
 			</div>
 			<div className={styles.footer}>
-				<span className={styles.footerText}>
-					{loading
-						? "Loading books…"
-						: libraryTotal === null || total === libraryTotal
-							? `${total} books`
-							: `${total} of ${libraryTotal} books`}
+				<span className={styles.footerText} aria-live="polite">
+					{bookCountStatus({
+						loading,
+						total,
+						libraryTotal,
+						selectedCount,
+					})}
 				</span>
 			</div>
 			<Drawer
 				open={isBookSidebarOpen}
 				onOpenChange={(open) => {
-					if (!open) setIsBookSidebarOpen(false);
+					if (!open) closeBookDetails();
 				}}
 				width={500}
 				bleed
@@ -460,13 +507,54 @@ export const Books = ({
 				}}
 			>
 				{selectedSidebarBook && (
-					<BookDrawer
-						book={selectedSidebarBook}
-						onClose={() => setIsBookSidebarOpen(false)}
-					/>
+					<BookDrawer book={selectedSidebarBook} onClose={closeBookDetails} />
 				)}
 			</Drawer>
+			<ContextMenu
+				menu={menu.menu}
+				returnFocusRef={gridContainerRef}
+				onClose={menu.close}
+			/>
+			<DeleteBooksDialogs />
 		</div>
+	);
+};
+
+/** "Delete 2 Books?" and, when files stayed behind, what to do about them. */
+const DeleteBooksDialogs = () => {
+	const dialog = useDeleteBooksDialog();
+	const copy = deleteBooksCopy(dialog.deletion, dialog.books.length);
+	return (
+		<>
+			<AlertDialog
+				open={dialog.open}
+				onOpenChange={(open) => {
+					if (!open) dialog.cancel();
+				}}
+				title={deleteBooksDialogTitle(dialog.books.map((book) => book.title))}
+				textAlign="left"
+				description={copy.description}
+				confirmLabel={copy.confirmLabel}
+				destructive
+				onConfirm={dialog.confirm}
+			/>
+			<AlertDialog
+				open={dialog.failures !== null || dialog.error !== null}
+				onOpenChange={(open) => {
+					if (!open) dialog.dismissFailures();
+				}}
+				title={
+					dialog.error !== null ? "Couldn’t Delete Books" : copy.failureTitle
+				}
+				textAlign="left"
+				description={
+					dialog.error ??
+					`${copy.failureDescription} ${(dialog.failures ?? []).join(", ")}`
+				}
+				confirmLabel="OK"
+				onConfirm={dialog.dismissFailures}
+			/>
+		</>
 	);
 };
 
@@ -526,22 +614,23 @@ const SaveAsShelfControl = ({
 
 	return (
 		<>
-			<Tooltip label="Save as shelf…">
-				<IconButton
+			<Tooltip label="Keep these filters as a shelf in the sidebar">
+				<Button
 					ref={bookmarkButtonRef}
+					variant="subtle"
 					className={styles.shelfButton}
-					aria-label="Save as shelf"
 					onClick={() => setIsOpen(true)}
 				>
-					<F7Bookmark style={{ fontSize: 15 }} />
-				</IconButton>
+					<F7Bookmark aria-hidden="true" style={{ fontSize: 14 }} />
+					Save as Shelf…
+				</Button>
 			</Tooltip>
 			<Sheet
 				open={isOpen}
 				onOpenChange={(open) => {
 					if (!open) close();
 				}}
-				title="Save as shelf"
+				title="Save as Shelf"
 				width={420}
 				onCloseAutoFocus={(event) => {
 					// The sheet has no Dialog.Trigger; return focus to the bookmark

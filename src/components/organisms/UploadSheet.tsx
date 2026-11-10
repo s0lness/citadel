@@ -10,7 +10,6 @@ import {
 	HoldButton,
 	IconButton,
 } from "@/components/ui";
-import { ignorePopoverInteractOutside } from "@/components/ui/popover-interop";
 import { useFollowNewest } from "@/lib/hooks/use-follow-newest";
 import type { ReviewDeck } from "@/lib/hooks/use-review-deck";
 import {
@@ -79,8 +78,9 @@ export const UploadSheet = ({
 				<Dialog.Content
 					className={styles.content}
 					aria-describedby={undefined}
-					onPointerDownOutside={ignorePopoverInteractOutside}
-					onInteractOutside={ignorePopoverInteractOutside}
+					// A sheet is modal: a click outside it does nothing.
+					onPointerDownOutside={(event) => event.preventDefault()}
+					onInteractOutside={(event) => event.preventDefault()}
 				>
 					{/* Phones get an iOS navigation bar: Done, the title, and +. */}
 					<div
