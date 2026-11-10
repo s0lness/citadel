@@ -48,8 +48,22 @@ describe("pageShortcuts", () => {
 	it("keeps the browser's own chords in a browser", () => {
 		for (const env of [macBrowser, windowsBrowser]) {
 			const commands = commandsOf(env);
-			expect(commands).toEqual(["find", "book-show-details", "book-delete"]);
+			expect(commands).toEqual([
+				"undo",
+				"redo",
+				"find",
+				"book-show-details",
+				"book-delete",
+			]);
 		}
+	});
+
+	it("binds Undo and Redo everywhere the page handles keys", () => {
+		for (const env of [windowsApp, linuxApp, macBrowser, windowsBrowser]) {
+			expect(shortcutChord("undo", env)).toBe("mod+z");
+			expect(shortcutChord("redo", env)).toBe("mod+shift+z");
+		}
+		expect(commandsOf(macApp)).not.toContain("undo");
 	});
 
 	it("deletes with the Delete key off macOS", () => {

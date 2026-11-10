@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { unclippedMenuHeight } from "@/lib/select-menu-fit";
+import { menuRoom, unclippedMenuHeight } from "@/lib/select-menu-fit";
 
 const px = (value: string) => Number.parseFloat(value) || 0;
 
@@ -11,9 +11,6 @@ const fitMenu = (viewport: HTMLElement) => {
 	const content = viewport.parentElement;
 	const wrapper = content?.parentElement;
 	if (!content || !wrapper) return;
-	// Radix grows a bottom-anchored menu upwards itself; only a menu pinned
-	// to the top edge gets shortened.
-	if (wrapper.style.bottom === "0px") return;
 	const style = window.getComputedStyle(content);
 	const fullHeight =
 		px(style.borderTopWidth) +
@@ -23,15 +20,21 @@ const fitMenu = (viewport: HTMLElement) => {
 		px(style.borderBottomWidth);
 	const rect = wrapper.getBoundingClientRect();
 	const height = unclippedMenuHeight({
-		top: rect.top,
+		room: menuRoom({
+			top: rect.top,
+			bottom: rect.bottom,
+			viewportHeight: window.innerHeight,
+			pinnedToBottom: wrapper.style.bottom === "0px",
+		}),
 		height: content.getBoundingClientRect().height,
 		fullHeight,
-		viewportHeight: window.innerHeight,
 		scrollTop: viewport.scrollTop,
 	});
 	if (height === null) return;
-	wrapper.style.height = `${height}px`;
-	viewport.scrollTop = 0;
+	// Unscroll first: Radix grows the menu by what it scrolls back, and the
+	// scroll event brings us back here for whatever height is still missing.
+	if (viewport.scrollTop > 0) viewport.scrollTop = 0;
+	else wrapper.style.height = `${height}px`;
 };
 
 /**
@@ -46,14 +49,25 @@ export const useSelectMenuFit = () => {
 	useEffect(() => {
 		if (!open) return;
 		let cancelled = false;
+		let viewport: HTMLDivElement | null = null;
+		// A list that fits has nothing to scroll to, so any scroll it gets
+		// (Radix's placement, its scroll arrow bringing the chosen item into
+		// view as it mounts) is undone as it happens.
+		const refit = () => {
+			if (viewport) fitMenu(viewport);
+		};
 		void (async () => {
 			await nextFrame();
+			if (cancelled) return;
+			viewport = viewportRef.current;
+			viewport?.addEventListener("scroll", refit);
+			refit();
 			await nextFrame();
-			const viewport = viewportRef.current;
-			if (!cancelled && viewport) fitMenu(viewport);
+			if (!cancelled) refit();
 		})();
 		return () => {
 			cancelled = true;
+			viewport?.removeEventListener("scroll", refit);
 		};
 	}, [open]);
 

@@ -836,7 +836,10 @@ export const useLibraryStore = create<LibraryStoreState>((set, get) => {
 
 			updateBook: (id, updates, options) =>
 				options?.registersUndo
-					? withActiveLibrary((library) => library.updateBook(id, updates), true)
+					? withActiveLibrary(
+							(library) => library.updateBook(id, updates),
+							true,
+						)
 					: writeLibrary((library) => library.updateBook(id, updates)),
 
 			updateAuthor: (id, updates) =>

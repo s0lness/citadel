@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { unclippedMenuHeight } from "./select-menu-fit";
+import { menuRoom, unclippedMenuHeight } from "./select-menu-fit";
 
-const near = {
-	top: 10,
-	height: 76,
-	fullHeight: 99,
-	viewportHeight: 700,
-	scrollTop: 24,
-};
+const near = { room: 680, height: 76, fullHeight: 99, scrollTop: 24 };
 
 describe("unclippedMenuHeight", () => {
 	it("grows a short menu that was shortened and scrolled near the top", () => {
@@ -24,12 +18,34 @@ describe("unclippedMenuHeight", () => {
 		).toBeNull();
 	});
 
-	it("leaves a long list scrolling when it can't fit below its top", () => {
+	it("leaves a long list scrolling when it can't fit", () => {
 		expect(
 			unclippedMenuHeight({ ...near, fullHeight: 900, height: 680 }),
 		).toBeNull();
+		expect(unclippedMenuHeight({ ...near, room: 50 })).toBeNull();
+	});
+});
+
+describe("menuRoom", () => {
+	it("measures down from the top of a menu pinned to its top", () => {
 		expect(
-			unclippedMenuHeight({ ...near, top: 640, viewportHeight: 700 }),
-		).toBeNull();
+			menuRoom({
+				top: 10,
+				bottom: 86,
+				viewportHeight: 700,
+				pinnedToBottom: false,
+			}),
+		).toBe(680);
+	});
+
+	it("measures up from the bottom of a menu pinned to its bottom", () => {
+		expect(
+			menuRoom({
+				top: 414,
+				bottom: 490,
+				viewportHeight: 500,
+				pinnedToBottom: true,
+			}),
+		).toBe(480);
 	});
 });

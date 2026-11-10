@@ -137,15 +137,11 @@ describe("menuStateFor", () => {
 			undoLabel: "Undo Mark as Finished",
 			redoLabel: null,
 		});
-		expect(menuStateFor({ ...marked, keyboardBusy: true }).appUndo).toBe(
-			false,
-		);
+		expect(menuStateFor({ ...marked, keyboardBusy: true }).appUndo).toBe(false);
 	});
 
 	it("leaves Undo native while another window is in front", () => {
-		expect(menuStateFor({ ...input, windowActive: false }).appUndo).toBe(
-			false,
-		);
+		expect(menuStateFor({ ...input, windowActive: false }).appUndo).toBe(false);
 	});
 
 	it("offers a disabled Undo when there is nothing to undo", () => {
@@ -158,7 +154,10 @@ describe("menuStateFor", () => {
 });
 
 describe("undoTitles", () => {
-	const history = { undo: "Undo Mark as Finished", redo: "Redo Mark as Finished" };
+	const history = {
+		undo: "Undo Mark as Finished",
+		redo: "Redo Mark as Finished",
+	};
 
 	it("is the app's history while the editor is closed", () => {
 		expect(
@@ -167,9 +166,9 @@ describe("undoTitles", () => {
 	});
 
 	it("is the editor's own Undo, and no Redo, while it is open", () => {
-		expect(undoTitles({ editor: { open: true, canUndo: true }, history })).toEqual(
-			{ undo: EDITOR_UNDO_TITLE, redo: null },
-		);
+		expect(
+			undoTitles({ editor: { open: true, canUndo: true }, history }),
+		).toEqual({ undo: EDITOR_UNDO_TITLE, redo: null });
 		expect(
 			undoTitles({ editor: { open: true, canUndo: false }, history }),
 		).toEqual({ undo: null, redo: null });

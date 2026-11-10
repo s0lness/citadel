@@ -51,6 +51,13 @@ const ScrollChevron = ({ direction }: { direction: "up" | "down" }) => (
 	</svg>
 );
 
+/**
+ * Lists this short always fit on screen, so they get no scroll arrows: an
+ * arrow that mounts scrolls the chosen item into view, re-clipping a menu
+ * that only had to be shown whole (`useSelectMenuFit`).
+ */
+const SCROLL_ARROWS_FROM = 9;
+
 /** An NSPopUpButton: the open menu overlays the trigger with the selected item aligned. */
 export const Select = ({
 	value,
@@ -64,6 +71,7 @@ export const Select = ({
 	className,
 }: SelectProps) => {
 	const menu = useSelectMenuFit();
+	const scrollArrows = options.length >= SCROLL_ARROWS_FROM;
 	return (
 		<RadixSelect.Root
 			value={value}
@@ -88,9 +96,11 @@ export const Select = ({
 			<RadixSelect.Portal>
 				{/* Item-aligned positioning sizes the menu to cover the trigger. */}
 				<RadixSelect.Content className={styles.content}>
-					<RadixSelect.ScrollUpButton className={styles.scrollButton}>
-						<ScrollChevron direction="up" />
-					</RadixSelect.ScrollUpButton>
+					{scrollArrows && (
+						<RadixSelect.ScrollUpButton className={styles.scrollButton}>
+							<ScrollChevron direction="up" />
+						</RadixSelect.ScrollUpButton>
+					)}
 					<RadixSelect.Viewport ref={menu.viewportRef}>
 						{options.map((option) => (
 							<RadixSelect.Item
@@ -105,9 +115,11 @@ export const Select = ({
 							</RadixSelect.Item>
 						))}
 					</RadixSelect.Viewport>
-					<RadixSelect.ScrollDownButton className={styles.scrollButton}>
-						<ScrollChevron direction="down" />
-					</RadixSelect.ScrollDownButton>
+					{scrollArrows && (
+						<RadixSelect.ScrollDownButton className={styles.scrollButton}>
+							<ScrollChevron direction="down" />
+						</RadixSelect.ScrollDownButton>
+					)}
 				</RadixSelect.Content>
 			</RadixSelect.Portal>
 		</RadixSelect.Root>

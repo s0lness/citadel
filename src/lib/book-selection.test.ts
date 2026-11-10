@@ -259,9 +259,9 @@ describe("bookClickIntent", () => {
 		expect(bookClickIntent({ ...plain, ctrlKey: true }, windows)).toBe(
 			"toggle",
 		);
-		expect(
-			bookClickIntent({ ...plain, metaKey: true, detail: 2 }, mac),
-		).toBe("toggle");
+		expect(bookClickIntent({ ...plain, metaKey: true, detail: 2 }, mac)).toBe(
+			"toggle",
+		);
 	});
 
 	it("extends with ⇧, even on the second click", () => {

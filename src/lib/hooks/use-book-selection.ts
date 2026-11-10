@@ -113,7 +113,10 @@ export const followWithDetails = (book: LibraryBook) => {
  */
 export const openBookFile = (
 	book: LibraryBook,
-	{ capabilities, fileOpener }: Pick<PlatformAdapter, "capabilities" | "fileOpener">,
+	{
+		capabilities,
+		fileOpener,
+	}: Pick<PlatformAdapter, "capabilities" | "fileOpener">,
 ) => {
 	if (capabilities.canOpenLocalPaths) {
 		const path = primaryLocalPath(book);

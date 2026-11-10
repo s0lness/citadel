@@ -117,16 +117,23 @@ Follow `docs/adr/0014-in-place-feedback.md` for when to ask at all.
 
 ## Selection and books
 
-- **Desktop app:** click selects; double-click or Return opens the details
-  drawer; ⌘-click (Ctrl-click off macOS) toggles and ⇧-click extends; ⌘A
-  selects all, fetching pages it hasn't loaded when an action runs. Space is
-  Quick Look on macOS. Dragging covers out copies their files
+- **Clicks, everywhere (desktop app and browser):** a click or tap selects
+  the book and shows its details (with the drawer open, it switches to that
+  book); ⌘-click (Ctrl-click off macOS) toggles a book in the selection and
+  ⇧-click extends it, both without the drawer; a double-click opens the
+  book's preferred file (`src/lib/book-files.ts`) in its default app on the
+  desktop, or downloads it in the browser. A triple-click still opens once,
+  and the drawer the first click opened stays put (`bookClickIntent`).
+- **Keys:** arrows move the selection, and an open drawer follows it; Return
+  shows the details; ⌘O (Open) opens the file; ⌘A selects all, fetching
+  pages it hasn't loaded when an action runs. Space is Quick Look on macOS.
+- Dragging covers out copies their files on the desktop
   (`platform.window.startDrag`); drops that arrive while that drag is in
   flight are ignored (`src/lib/drag-out-guard.ts`), so dropping books back
-  doesn't import copies.
-- **Web:** a single click opens, like a link; modifier-clicks still select.
-  Dragging a cover downloads its file where the browser reads `DownloadURL`
-  (Chromium).
+  doesn't import copies. In the browser a dragged cover downloads its file
+  where the browser reads `DownloadURL` (Chromium).
+- The action that opens a book's file is **Open** ("Open 15 Books"), in the
+  right-click menu, the Book menu and the drawer.
 - Bulk actions are Mark as Finished and Delete; one confirmation for delete
   (ADR 0014). The status bar says "2 of 14 selected".
 - **Details drawer:** a layer of the content panel, not the window: from the
@@ -153,17 +160,30 @@ Follow `docs/adr/0014-in-place-feedback.md` for when to ask at all.
 
 - macOS desktop has the full menu bar (Citadel · Library · Edit · Book · View
   · Go · Window · Help, `src-tauri/src/menu/`). The library window pushes what
-  it shows (selection count, sidebar, sort, libraries, editor Undo) and takes
+  it shows (selection count, sidebar, sort, libraries, Undo and Redo) and takes
   its commands through `useMenuCommands`. The menu is the one place each of
   its chords is handled there: the page binds none of them.
 - Every chord lives in one table, `src/lib/app-shortcuts.ts`. Windows and
   Linux desktop bind the same chords in the page (Delete for Delete…). A
   browser keeps its own chords (Ctrl/⌘+1…5, O, E, N, ⇧R, ","); there only
-  Find, Show Details and Delete are bound. Menus show a chord only where it
+  Undo, Redo, Find, Show Details and Delete are bound. Menus show a chord only where it
   works, as "⌘I" on macOS and "Ctrl+I" elsewhere.
-- The book editor saves with ⌘S/Ctrl+S everywhere. Outside text fields, Undo
-  steps back its saves (Edit > Undo on macOS, ⌘Z/Ctrl+Z elsewhere); text
-  fields keep their own typing undo.
+- **Undo** works like NSUndoManager: one history for the library window
+  (`src/lib/undo-history.ts`, `src/stores/undo/store.ts`). Edit > Undo and
+  Redo name the top entry ("Undo Mark as Finished") and are disabled when
+  there is none; ⌘Z/⇧⌘Z (Ctrl+Z/Ctrl+Shift+Z off the Mac) do the same and
+  are left to the browser when there is nothing to undo. A focused text
+  field keeps its own typing undo, and the menu shows the native items.
+- Every action that changes the library does exactly one of two things: it
+  registers an undo entry, or, if it can't be undone, it clears the history,
+  so Undo never reaches back across it. Registered: Mark as Finished /
+  Unfinished (one book or many). Clearing: every other write through the
+  library store (delete, edits, covers, identifiers, authors), adding books,
+  shelf changes and a library switch or forget. A new action picks a side
+  deliberately.
+- The book editor saves with ⌘S/Ctrl+S everywhere. While it is open, Undo
+  outside text fields is its own ("Undo Edit": drop unsaved edits, then step
+  back saves), with no Redo; its saves clear the app's history.
 - While a field or a sheet has the keyboard, the Book menu stands down, so
   ⌘⌫ deletes text, not books.
 
@@ -192,12 +212,15 @@ scroller is hovered or scrolling (`data-scrolling`, from
 ## Materials (Liquid Glass)
 
 - On macOS the webview is transparent over an `NSVisualEffectView` with the
-  platform **sidebar material** (`NSVisualEffectMaterial.sidebar`, Tauri's
-  `Effect::Sidebar`), the one Apple's own apps use, applied in
-  `src-tauri/src/window.rs` (`apply_glass`). It follows the window's active
-  state, so the glass goes flat when the window isn't in front; the
-  interface greys with it (`data-window-inactive`,
-  `useWindowChromeState`). The toolbar + sidebar L-region is real glass.
+  **popover material** (Tauri's `Effect::Popover`), applied in
+  `src-tauri/src/window.rs` (`apply_glass`), which lets the desktop's colour
+  read through. The platform sidebar material (`Effect::Sidebar`, the one
+  Apple's own apps use) was tried in CDL-90 and rejected by the owner on
+  seeing it: it flattens the backdrop into a uniform grey. The material
+  follows the window's active state, so the glass goes flat by itself when
+  the window isn't in front; the interface greys its accents with it
+  (`data-window-inactive`, `useWindowChromeState`) but adds no tint of its
+  own over the glass. The toolbar + sidebar L-region is real glass.
 - `:root[data-vibrancy]` (macOS desktop only) swaps `--ctd-nav-bg`/
   `--ctd-header-bg` to transparent and the page background to transparent.
   Elsewhere the opaque fallbacks apply; never assume transparency exists.
@@ -223,8 +246,10 @@ scroller is hovered or scrolling (`data-scrolling`, from
   honoured globally in `styles.css`.
 - Menus appear at once, as on macOS, and fade quickly on dismiss.
 - Hover feedback is a background tint on rows and controls. The one hover
-  motion is on covers you can open: they lift 2px (`BookCover.tsx`);
-  display-only covers (details drawer, edit page) stay still.
+  motion is on covers you can open: they lift 2px (`BookCover.module.css`);
+  display-only covers (details drawer, edit page) stay still. The lift moves
+  the art inside the hit target, never the target itself, so a pointer
+  resting on a cover's edge can't make it flicker.
 
 ## Accessibility
 
