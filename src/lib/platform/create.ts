@@ -1,6 +1,7 @@
 import { isDesktop } from "./runtime";
 import { homeDirectory } from "./paths/tauri";
-import { onAddBook } from "./menu/tauri";
+import { tauriMenu } from "./menu/tauri";
+import { webMenu } from "./menu/web";
 import { tauriUpdates } from "./updates/tauri";
 import { webUpdates } from "./updates/web";
 import { tauriRecovery } from "./recovery/tauri";
@@ -29,9 +30,11 @@ export const createTauriPlatform = (): PlatformAdapter => ({
 		canOpenLocalPaths: true,
 		supportsAutoUpdates: true,
 		supportsLocalOpdsServer: true,
+		canQuickLook: detectOperatingSystem() === "macos",
+		canDragFilesOut: true,
 	},
 	homeDirectory,
-	menu: { onAddBook },
+	menu: tauriMenu,
 	updates: tauriUpdates,
 	recovery: tauriRecovery,
 	dialogs: createTauriDialogs(),
@@ -51,9 +54,11 @@ export const createWebPlatform = (): PlatformAdapter => ({
 		canOpenLocalPaths: false,
 		supportsAutoUpdates: false,
 		supportsLocalOpdsServer: false,
+		canQuickLook: false,
+		canDragFilesOut: false,
 	},
 	homeDirectory: async () => null,
-	menu: { onAddBook: async () => () => {} },
+	menu: webMenu,
 	updates: webUpdates,
 	recovery: webRecovery,
 	dialogs: createWebDialogs(),
